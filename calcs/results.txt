@@ -1,0 +1,13 @@
+Reach (shoulder to tip): 400 mm
+Shoulder: 1.62 N*m = 55% of stall
+Elbow:    0.96 N*m = 33% of stall
+Limit:    0.98 N*m (33% of stall)
+                Mass                 kg      Shoulder_Nm
+    ____________________________    _____    ___________
+
+    "upper arm + elbow servo"       0.103     0.094576  
+    "forearm + wrist-flex servo"    0.104       0.2118  
+    "wrist + wrist-roll servo"      0.079      0.21622  
+    "gripper + jaw servo"           0.099      0.31661  
+    "payload"                         0.2       0.7848  
+
