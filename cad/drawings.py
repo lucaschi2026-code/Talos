@@ -6,7 +6,7 @@ Each sheet has third-angle front / top / right views with hidden lines, an
 isometric view, key dimensions and a numbered feature list: the modelling
 steps, in order, with every number needed to rebuild the part by hand.
 
-    python drawings.py      # writes drawings/Talos_drawings.pdf and a PNG per sheet
+    python drawings.py      # full set, the two work sets, and a PDF + PNG per sheet
 
 All dimensions come from talos_arm.py, so the drawings follow the model.
 """
@@ -56,6 +56,22 @@ DIM_PT, NOTE_PT = 8.5, 7.5                  # dimension and leader-note text siz
 
 # Part numbering: TAL-0xx = assembly and reference sheets, TAL-1xx = printed parts,
 # numbered base to tip. Files are named <part no>_<slug>_rev-<rev>.
+
+# The parts are split into two work sets so two people can model them in parallel.
+# The reference sheets (TAL-0xx) go in both. The split is balanced on modelling steps
+# (A 40, B 36). The sets only meet at the elbow (upper arm shell -> forearm clevis), and
+# both sides of it are defined on the shared sheets (servo pocket P, clevis).
+WORK_SETS = {
+    "A": ("base-to-upper-arm", "base, shoulder, upper arm, hub caps",
+          ["TAL-101", "TAL-102", "TAL-103", "TAL-108", "TAL-109"]),
+    "B": ("forearm-to-gripper", "forearm, wrist, gripper, moving jaw",
+          ["TAL-104", "TAL-105", "TAL-106", "TAL-107"]),
+}
+
+
+def work_set(part_no):
+    """Work set letter of a part ("A"/"B"), or None for a shared reference sheet."""
+    return next((k for k, (_, _, parts) in WORK_SETS.items() if part_no in parts), None)
 
 RHO, T_SHELL, INFILL = 1.24e-3, 1.2, 0.20   # same mass model as calcs/design_check.py
 
@@ -149,6 +165,7 @@ class Sheet:
         self.low = {}     # view -> lowest paper y used (view or its dimensions), for the label
         self.scale_label = "-"
         self.mass = None
+        self.n_features = 0
 
     # ---- views
     def views(self, shape, hidden=True, iso=True, iso_shape=None, region=REGION, gap_right=0.0):
@@ -288,6 +305,7 @@ class Sheet:
         for item in items:
             numbered = not item.startswith(("-", "*"))
             count += numbered
+            self.n_features += numbered
             prefix = f"{count:>2}. " if numbered else "    "
             body = item.lstrip("-* ")
             lines = textwrap.wrap(body, width - len(prefix)) or [""]
@@ -333,6 +351,13 @@ class Sheet:
         for r in (1.6, 3.2):
             ax.add_patch(plt.Circle((sx + 11, sy), r, fill=False, lw=0.3 * PT))
         ax.text(sx - 2, sy, "THIRD ANGLE", fontsize=4.5, ha="right", va="center")
+        # work-set tag, so a loose sheet says whose it is
+        ws = work_set(self.part_no)
+        tag = f"WORK SET {ws}: {WORK_SETS[ws][1]}" if ws else "REFERENCE: in work sets A and B"
+        ax.add_patch(Rectangle((x0, sy - 3.0), 66, 6.0, fill=ws is not None, fc="0.88",
+                               lw=0.3 * PT))
+        ax.text(x0 + 1.5, sy, tag, fontsize=5.6 if ws else 5.2, va="center",
+                weight="bold" if ws else "normal")
 
 
 # ---------------------------------------------------------------- shared feature text
@@ -390,15 +415,15 @@ def sheet_assembly(n, total):
     s.dim("front", (-100, 0, 0), (66, 0, 0), "h", "below")
     s.dim("top", (0, -66, 0), (0, 66, 0), "v", "left", text="132 (plinth, across corners)")
     bom = [
-        "TAL-101  Base ........................ 1   PLA",
-        "TAL-102  Shoulder (turntable+cradle) . 1   PLA",
-        "TAL-103  Upper arm ................... 1   PLA",
-        "TAL-104  Forearm ..................... 1   PLA",
-        "TAL-105  Wrist ....................... 1   PLA",
-        "TAL-106  Gripper body ................ 1   PLA",
-        "TAL-107  Moving jaw .................. 1   PLA",
-        "TAL-108  Hub cap, large .............. 3   PLA",
-        "TAL-109  Hub cap, small .............. 3   PLA",
+        f"TAL-101  Base ........................ 1   PLA   set {work_set('TAL-101')}",
+        f"TAL-102  Shoulder (turntable+cradle) . 1   PLA   set {work_set('TAL-102')}",
+        f"TAL-103  Upper arm ................... 1   PLA   set {work_set('TAL-103')}",
+        f"TAL-104  Forearm ..................... 1   PLA   set {work_set('TAL-104')}",
+        f"TAL-105  Wrist ....................... 1   PLA   set {work_set('TAL-105')}",
+        f"TAL-106  Gripper body ................ 1   PLA   set {work_set('TAL-106')}",
+        f"TAL-107  Moving jaw .................. 1   PLA   set {work_set('TAL-107')}",
+        f"TAL-108  Hub cap, large .............. 3   PLA   set {work_set('TAL-108')}",
+        f"TAL-109  Hub cap, small .............. 3   PLA   set {work_set('TAL-109')}",
         "-",
         "Feetech STS3215 servo (12 V) ......... 6   bought",
         "Waveshare Bus Servo Adapter (A) ...... 1   bought",
@@ -419,7 +444,7 @@ def sheet_assembly(n, total):
         "Clevis plates on every pitch joint: output plate +Y (y 18.9..22.9), idler plate -Y (y -22.9..-18.9).",
         "Front view: zero pose (all joints 0, arm straight up). Isometric: 'ready' pose.",
     ]
-    y = s.features("PARTS LIST", bom)
+    y = s.features("PARTS LIST (set = work set, A or B)", bom)
     y = s.features("JOINT LAYOUT", layout, y_top=y - 2)
     s.notes(GENERAL[:1] + ["Part sheets give each part in its own frame; this sheet shows where those frames sit."], y - 2)
     s.title_block(total)
@@ -781,22 +806,41 @@ SHEETS = [sheet_assembly, sheet_servo, sheet_common, sheet_base, sheet_shoulder,
 
 
 def main():
-    """Write the full set as one PDF, plus a PDF and a PNG preview of every sheet."""
-    sheets_dir, preview_dir = OUT / "sheets", OUT / "previews"
-    for d in (OUT, sheets_dir, preview_dir):
+    """Write the full set and the two work sets as PDFs, plus a PDF and a PNG of every sheet.
+
+    Sheet numbers ("sheet n of 12") follow the full set in every file, so a sheet is
+    identical wherever it appears.
+    """
+    sheets_dir, preview_dir, sets_dir = OUT / "sheets", OUT / "previews", OUT / "work-sets"
+    for d in (OUT, sheets_dir, preview_dir, sets_dir):
         d.mkdir(exist_ok=True)
     total = len(SHEETS)
-    set_path = OUT / f"TAL-000_drawing-set_rev-{REV}.pdf"
-    with PdfPages(set_path) as pdf:
-        for i, make in enumerate(SHEETS, start=1):
-            s = make(i, total)
-            stem = f"{s.part_no}_{s.slug}_rev-{REV}"
-            pdf.savefig(s.fig)
-            s.fig.savefig(sheets_dir / f"{stem}.pdf")
-            s.fig.savefig(preview_dir / f"{stem}.png", dpi=110)
-            plt.close(s.fig)
-            print(f"sheet {i}/{total}: {stem}")
-    print(f"wrote {set_path}")
+    full_path = OUT / f"TAL-000_drawing-set_rev-{REV}.pdf"
+    set_paths = {k: sets_dir / f"TAL-SET-{k}_{slug}_rev-{REV}.pdf" for k, (slug, _, _) in WORK_SETS.items()}
+    pdfs = {k: PdfPages(p) for k, p in set_paths.items()}
+    work = {k: [0, 0] for k in WORK_SETS}            # parts, feature steps
+    try:
+        with PdfPages(full_path) as full:
+            for i, make in enumerate(SHEETS, start=1):
+                s = make(i, total)
+                stem = f"{s.part_no}_{s.slug}_rev-{REV}"
+                ws = work_set(s.part_no)
+                full.savefig(s.fig)
+                for k in ([ws] if ws else WORK_SETS):
+                    pdfs[k].savefig(s.fig)
+                if ws:
+                    work[ws][0] += 1
+                    work[ws][1] += s.n_features
+                s.fig.savefig(sheets_dir / f"{stem}.pdf")
+                s.fig.savefig(preview_dir / f"{stem}.png", dpi=110)
+                plt.close(s.fig)
+                print(f"sheet {i}/{total}: {stem}  [{'set ' + ws if ws else 'both sets'}]")
+    finally:
+        for pdf in pdfs.values():
+            pdf.close()
+    print(f"wrote {full_path}")
+    for k, p in set_paths.items():
+        print(f"wrote {p}  ({work[k][0]} parts, {work[k][1]} modelling steps)")
 
 
 if __name__ == "__main__":

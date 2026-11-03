@@ -13,6 +13,7 @@ Parametric CadQuery model of the Talos 5-axis arm plus gripper, exported as a fu
 | `talos_arm.py` | Generator. All dimensions and poses live at the top |
 | `render.py` | Renders PNG views into `renders/` and checks every part pair for interference |
 | `drawings/TAL-000_drawing-set_rev-A.pdf` | Full technical drawing set, 12 A3 sheets: everything needed to rebuild each part by hand |
+| `drawings/work-sets/` | The same set split in two, one PDF per person: see [Work sets](#work-sets) |
 | `drawings/sheets/`, `drawings/previews/` | The same sheets one per file: PDF, plus a PNG preview |
 | `drawings.py` | Generates the drawing set from `talos_arm.py`, so the drawings always match the model |
 
@@ -40,6 +41,21 @@ Parametric CadQuery model of the Talos 5-axis arm plus gripper, exported as a fu
 | TAL-107 | Moving jaw | |
 | TAL-108 | Hub cap, large | ×3 |
 | TAL-109 | Hub cap, small | ×3 |
+
+### Work sets
+
+The parts are split into two sets so two people can model them at the same time. Each set has about the same amount of work, counted in modelling steps on the feature lists.
+
+| Set | File | Parts | Steps |
+| --- | --- | --- | --- |
+| A | [`TAL-SET-A_base-to-upper-arm_rev-A.pdf`](drawings/work-sets/TAL-SET-A_base-to-upper-arm_rev-A.pdf) | TAL-101 base, TAL-102 shoulder, TAL-103 upper arm, TAL-108 and TAL-109 hub caps | 40 |
+| B | [`TAL-SET-B_forearm-to-gripper_rev-A.pdf`](drawings/work-sets/TAL-SET-B_forearm-to-gripper_rev-A.pdf) | TAL-104 forearm, TAL-105 wrist, TAL-106 gripper body, TAL-107 moving jaw | 36 |
+
+- **Shared sheets:** both sets start with TAL-000, TAL-001 and TAL-002. Each person models servo pocket P and the common features from those, so both sides of every joint use the same geometry.
+- **Where the sets meet:** only at the elbow. The upper arm's end shell (set A) holds the elbow servo, and the forearm's clevis (set B) clamps its horns. Both are defined on TAL-001 and TAL-002, so check them against each other before printing.
+- **Similar parts:** the upper arm and the forearm are built the same way, with the same feature list and different numbers, so the two of you can cross-check each other's work on them.
+- **Tags:** every sheet's title block carries a tag saying which set it belongs to. Sheet numbers ("4 of 12") follow the full set in every file, so a sheet is identical wherever it appears.
+- **Changing the split:** edit `WORK_SETS` in `drawings.py` and regenerate.
 
 Each part sheet has:
 - front, top and right views in third-angle projection, with hidden lines dashed
