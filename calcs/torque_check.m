@@ -1,7 +1,8 @@
 %% Talos torque check: shoulder and elbow, arm held straight out (worst case)
 % Statics: tau = g * sum(m_i * x_i), where x_i is each mass's horizontal
-% distance from the joint axis. Masses start from the SO-101 URDF (each link
-% includes the servo mounted on it). Replace them with CAD / kitchen-scale values.
+% distance from the joint axis. Masses and CoM offsets are the lumped CAD values
+% printed by design_check.py (each link includes the servo mounted on it).
+% Replace them with kitchen-scale values once parts are printed.
 
 clear; clc;
 
@@ -11,20 +12,20 @@ tau_stall  = 2.94;  % STS3215 12 V stall torque, N*m (30 kg*cm)
 limit_frac = 1/3;   % keep continuous load under this fraction of stall
 
 %% Geometry (m)
-L1    = 0.120;  % shoulder axis -> elbow axis (upper arm)
-L2    = 0.120;  % elbow axis -> wrist-flex axis (forearm)
-L_tip = 0.160;  % wrist-flex axis -> gripper tip (SO-101 wrist + gripper)
+L1    = 0.116;  % shoulder axis -> elbow axis (upper arm)
+L2    = 0.135;  % elbow axis -> wrist-flex axis (forearm)
+L_tip = 0.169;  % wrist-flex axis -> gripper tip (63 mm wrist + 106 mm gripper)
 
 %% Masses (kg), in this order: upper arm, forearm, wrist, gripper, payload
 names = ["upper arm + elbow servo", "forearm + wrist-flex servo", ...
          "wrist + wrist-roll servo", "gripper + jaw servo", "payload"];
-m     = [0.103, 0.104, 0.079, 0.099, 0.200];
+m     = [0.115, 0.119, 0.093, 0.103, 0.200];
 
 % Centre-of-mass offsets (m), each measured from the START of its own segment
-d_upper   = 0.78 * L1;  % from shoulder axis (elbow servo pulls COM toward the elbow)
-d_fore    = 0.73 * L2;  % from elbow axis
-d_wrist   = 0.039;      % from wrist-flex axis
-d_gripper = 0.086;      % from wrist-flex axis
+d_upper   = 0.0819;     % from shoulder axis (elbow servo pulls COM toward the elbow)
+d_fore    = 0.0954;     % from elbow axis
+d_wrist   = 0.0376;     % from wrist-flex axis
+d_gripper = 0.1017;     % from wrist-flex axis
 d_payload = L_tip;      % from wrist-flex axis (held at the tip)
 
 %% Torque about each joint

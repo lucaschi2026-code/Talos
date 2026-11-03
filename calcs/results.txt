@@ -1,13 +1,14 @@
-Reach (shoulder to tip): 400 mm
-Shoulder: 1.62 N*m = 55% of stall
-Elbow:    0.96 N*m = 33% of stall
+(Computed with a line-for-line Python port of torque_check.m; MATLAB was not available. Re-run in MATLAB to refresh.)
+Reach (shoulder to tip): 420 mm
+Shoulder: 1.78 N*m = 61% of stall
+Elbow:    1.10 N*m = 38% of stall
 Limit:    0.98 N*m (33% of stall)
                 Mass                 kg      Shoulder_Nm
     ____________________________    _____    ___________
 
-    "upper arm + elbow servo"       0.103     0.094576  
-    "forearm + wrist-flex servo"    0.104       0.2118  
-    "wrist + wrist-roll servo"      0.079      0.21622  
-    "gripper + jaw servo"           0.099      0.31661  
-    "payload"                         0.2       0.7848  
+    "upper arm + elbow servo"       0.115      0.09240  
+    "forearm + wrist-flex servo"    0.119      0.24679  
+    "wrist + wrist-roll servo"      0.093      0.26330  
+    "gripper + jaw servo"           0.103      0.35638  
+    "payload"                       0.200      0.82404  
 
