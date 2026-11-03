@@ -42,15 +42,20 @@ REGION = (14.0, 14.0, 272.0, 283.0)         # view area (x0, y0, x1, y1)
 COL_X = 278.0                               # right column: feature list + title block
 # Dimensions go on the outer sides only (front: below/left, top: above, right view: right),
 # so the gaps between views stay small. Margins leave room for up to 3 dimension levels.
-M_LEFT, M_BOTTOM, M_TOP, M_RIGHT = 22.0, 26.0, 26.0, 16.0
-GAP_FT, GAP_FR = 14.0, 22.0                 # front -> top, front -> right
+M_LEFT, M_BOTTOM, M_TOP, M_RIGHT = 31.0, 35.0, 33.0, 22.0
+GAP_FT, GAP_FR = 18.0, 30.0                 # front -> top, front -> right
 PT = 72 / 25.4                              # points per mm
-SCALES = [(2, "2:1"), (1.5, "3:2"), (1, "1:1"), (2 / 3, "2:3"), (0.5, "1:2"),
+SCALES = [(5, "5:1"), (4, "4:1"), (3, "3:1"), (2, "2:1"), (1.5, "3:2"), (1, "1:1"), (2 / 3, "2:3"), (0.5, "1:2"),
           (0.4, "1:2.5"), (1 / 3, "1:3"), (0.25, "1:4"), (0.2, "1:5")]
 VIEWS = {"front": ((0, -1, 0), (1, 0, 0)), "top": ((0, 0, 1), (1, 0, 0)),
          "right": ((1, 0, 0), (0, 1, 0)), "iso": ((1, -1, 1), (1, 1, 0))}
 LABELS = {"front": "FRONT", "top": "TOP", "right": "RIGHT", "iso": "ISOMETRIC (NOT TO SCALE)"}
 TODAY = datetime.date.today().isoformat()
+REV = "A"                                   # bump when a released drawing changes
+DIM_PT, NOTE_PT = 8.5, 7.5                  # dimension and leader-note text size, points
+
+# Part numbering: TAL-0xx = assembly and reference sheets, TAL-1xx = printed parts,
+# numbered base to tip. Files are named <part no>_<slug>_rev-<rev>.
 
 RHO, T_SHELL, INFILL = 1.24e-3, 1.2, 0.20   # same mass model as calcs/design_check.py
 
@@ -128,9 +133,9 @@ def as_shape(obj):
 # ---------------------------------------------------------------- sheet
 
 class Sheet:
-    def __init__(self, number, title, part_no, qty="1", material="PLA, 20 % infill, 3 perimeters",
+    def __init__(self, number, title, part_no, slug, qty="1", material="PLA, 20 % infill, 3 perimeters",
                  frame=""):
-        self.number, self.title, self.part_no = number, title, part_no
+        self.number, self.title, self.part_no, self.slug = number, title, part_no, slug
         self.qty, self.material, self.frame = qty, material, frame
         self.fig = plt.figure(figsize=(PAPER[0] / 25.4, PAPER[1] / 25.4))
         self.ax = self.fig.add_axes([0, 0, 1, 1])
@@ -176,12 +181,12 @@ class Sheet:
         if iso:
             vis, _ = hlr(as_shape(iso_shape) if iso_shape is not None else shape, "iso", hidden=False)
             mn, mx = extents(vis)
-            cx0 = left + s * size["front"][0] + 20          # clear of the top view's right dims
+            cx0 = left + s * size["front"][0] + 27          # clear of the top view's right dims
             cy0 = max(origin["top"][1], bottom + s * size["front"][1] + 8)
             if x1 - cx0 < 60:                                # no room beside the top view: go above it
                 cx0, cy0 = origin["right"][0], origin["top"][1]
             cw, ch = x1 - cx0 - 4, y1 - cy0 - 8
-            si = 0.9 * min(cw / (mx - mn)[0], ch / (mx - mn)[1])
+            si = min(0.9 * min(cw / (mx - mn)[0], ch / (mx - mn)[1]), 1.6 * s)  # keep it in proportion
             off = (cx0 + (cw - si * (mx - mn)[0]) / 2, cy0 + (ch - si * (mx - mn)[1]) / 2 + 4)
             self._draw("iso", (vis, []), off, si, mn)
 
@@ -200,8 +205,8 @@ class Sheet:
 
     def _labels(self):
         for view, (_, _, _, bb) in self.place.items():
-            self.ax.text((bb[0] + bb[2]) / 2, self.low[view] - 3.5, LABELS[view],
-                         ha="center", va="top", fontsize=6.5, weight="bold")
+            self.ax.text((bb[0] + bb[2]) / 2, self.low[view] - 4.0, LABELS[view],
+                         ha="center", va="top", fontsize=8.5, weight="bold")
 
     def P(self, view, p):
         origin, s, mn, _ = self.place[view]
@@ -216,8 +221,8 @@ class Sheet:
     def _arrow(self, tip, direction):
         d = unit(direction)
         n = np.array([-d[1], d[0]])
-        base = np.array(tip) - 2.2 * d
-        self.ax.add_patch(Polygon([tip, base + 0.55 * n, base - 0.55 * n], closed=True,
+        base = np.array(tip) - 2.8 * d
+        self.ax.add_patch(Polygon([tip, base + 0.75 * n, base - 0.75 * n], closed=True,
                                   color="k", lw=0))
 
     def dim(self, view, p1, p2, axis, side, level=1, text=None, prefix="", suffix=""):
@@ -228,7 +233,7 @@ class Sheet:
         k = 0 if axis == "h" else 1
         value = abs(u2[k] - u1[k])
         label = text if text is not None else f"{prefix}{fmt(value)}{suffix}"
-        step = 6.5
+        step = 9.0
         if axis == "h":
             y = bb[3] + step * level if side == "above" else bb[1] - step * level
             sgn = 1 if side == "above" else -1
@@ -238,7 +243,7 @@ class Sheet:
             if abs(b[0] - a[0]) > 0.5:
                 self._arrow((a[0], y), (a[0] - b[0], 0))
                 self._arrow((b[0], y), (b[0] - a[0], 0))
-            self.ax.text((a[0] + b[0]) / 2, y + 0.7, label, ha="center", va="bottom", fontsize=6.2)
+            self.ax.text((a[0] + b[0]) / 2, y + 0.9, label, ha="center", va="bottom", fontsize=DIM_PT)
             if side == "below":
                 self.low[view] = min(self.low[view], y - 1.5)
         else:
@@ -250,7 +255,7 @@ class Sheet:
             if abs(b[1] - a[1]) > 0.5:
                 self._arrow((x, a[1]), (0, a[1] - b[1]))
                 self._arrow((x, b[1]), (0, b[1] - a[1]))
-            self.ax.text(x - 0.7, (a[1] + b[1]) / 2, label, ha="right", va="center", fontsize=6.2,
+            self.ax.text(x - 0.9, (a[1] + b[1]) / 2, label, ha="right", va="center", fontsize=DIM_PT,
                          rotation=90)
 
     def note(self, view, p, text, dx, dy):
@@ -260,7 +265,7 @@ class Sheet:
         self._arrow(a, a - b)
         end = b + np.array([3.0 if dx >= 0 else -3.0, 0])
         self._line(b, end)
-        self.ax.text(end[0] + (0.8 if dx >= 0 else -0.8), end[1], text, fontsize=5.8,
+        self.ax.text(end[0] + (0.8 if dx >= 0 else -0.8), end[1], text, fontsize=NOTE_PT,
                      ha="left" if dx >= 0 else "right", va="center")
         self.low[view] = min(self.low[view], end[1] - 2.5)
 
@@ -287,9 +292,9 @@ class Sheet:
             body = item.lstrip("-* ")
             lines = textwrap.wrap(body, width - len(prefix)) or [""]
             for j, line in enumerate(lines):
-                ax.text(COL_X, y, (prefix if j == 0 else " " * len(prefix)) + line, fontsize=5.3,
+                ax.text(COL_X, y, (prefix if j == 0 else " " * len(prefix)) + line, fontsize=5.6,
                         va="top", family="DejaVu Sans Mono")
-                y -= 2.35
+                y -= 2.5
             y -= 0.5
         return y
 
@@ -310,7 +315,7 @@ class Sheet:
         rows = [("PROJECT", "TALOS 5-axis arm"), ("PART", self.title), ("PART NO.", self.part_no),
                 ("QTY / ARM", self.qty), ("MATERIAL", self.material),
                 ("EST. MASS", f"{self.mass:.0f} g" if self.mass is not None else "-"),
-                ("SCALE", self.scale_label), ("UNITS", "mm"), ("DATE", TODAY),
+                ("SCALE", self.scale_label), ("UNITS / REV", f"mm / {REV}"), ("DATE", TODAY),
                 ("SHEET", f"{self.number} of {total}")]
         rh = h / 5
         for i, (k, v) in enumerate(rows):
@@ -333,12 +338,12 @@ class Sheet:
 # ---------------------------------------------------------------- shared feature text
 
 def servo_place(origin, shaft, body_x, body_y):
-    return (f"Servo pocket P (sheet REF-01) with the servo frame origin at ({', '.join(fmt(v) for v in origin)}); "
+    return (f"Servo pocket P (sheet TAL-001) with the servo frame origin at ({', '.join(fmt(v) for v in origin)}); "
             f"servo +Z (shaft) -> {shaft}, servo +X -> {body_x}, servo +Y -> {body_y}.")
 
 
 def case_screw_text(where):
-    return (f"Case screw holes (sheet C-01): {where}. Each is a dia 2.4 hole from the servo face to the "
+    return (f"Case screw holes (sheet TAL-002): {where}. Each is a dia 2.4 hole from the servo face to the "
             "seat, then a dia 4.2 counterbore from the seat outward through the part.")
 
 
@@ -370,7 +375,7 @@ def pts_text(pts):
 # ---------------------------------------------------------------- sheets
 
 def sheet_assembly(n, total):
-    s = Sheet(n, "General assembly and parts list", "TAL-A00", qty="-", material="-",
+    s = Sheet(n, "General assembly and parts list", "TAL-000", slug="general-assembly", qty="-", material="-",
               frame="world: base bottom centre, Z up, arm reaches +X")
     zero = cq.Compound.makeCompound([sh for _, sh, _ in ta.flatten(ta.build(ta.POSES["zero"]))])
     ready = cq.Compound.makeCompound([sh for _, sh, _ in ta.flatten(ta.build(ta.POSES["ready"]))])
@@ -385,15 +390,15 @@ def sheet_assembly(n, total):
     s.dim("front", (-100, 0, 0), (66, 0, 0), "h", "below")
     s.dim("top", (0, -66, 0), (0, 66, 0), "v", "left", text="132 (plinth, across corners)")
     bom = [
-        "TAL-01  Base ......................... 1   PLA",
-        "TAL-02  Shoulder (turntable+cradle) .. 1   PLA",
-        "TAL-03  Upper arm .................... 1   PLA",
-        "TAL-04  Forearm ...................... 1   PLA",
-        "TAL-05  Wrist ........................ 1   PLA",
-        "TAL-06  Gripper body ................. 1   PLA",
-        "TAL-07  Moving jaw ................... 1   PLA",
-        "TAL-08  Hub cap, large ............... 3   PLA",
-        "TAL-09  Hub cap, small ............... 3   PLA",
+        "TAL-101  Base ........................ 1   PLA",
+        "TAL-102  Shoulder (turntable+cradle) . 1   PLA",
+        "TAL-103  Upper arm ................... 1   PLA",
+        "TAL-104  Forearm ..................... 1   PLA",
+        "TAL-105  Wrist ....................... 1   PLA",
+        "TAL-106  Gripper body ................ 1   PLA",
+        "TAL-107  Moving jaw .................. 1   PLA",
+        "TAL-108  Hub cap, large .............. 3   PLA",
+        "TAL-109  Hub cap, small .............. 3   PLA",
         "-",
         "Feetech STS3215 servo (12 V) ......... 6   bought",
         "Waveshare Bus Servo Adapter (A) ...... 1   bought",
@@ -422,7 +427,7 @@ def sheet_assembly(n, total):
 
 
 def sheet_servo(n, total):
-    s = Sheet(n, "STS3215 servo + pocket envelope (reference)", "REF-01", qty="6", material="bought part",
+    s = Sheet(n, "STS3215 servo + pocket envelope (reference)", "TAL-001", slug="servo-pocket-reference", qty="6", material="bought part",
               frame="servo: origin on shaft axis at mid-plane, +Z = shaft")
     body, horns, plugs = ta.sts3215()
     servo = body.union(horns).union(plugs)
@@ -466,7 +471,7 @@ def sheet_servo(n, total):
 
 
 def sheet_common(n, total):
-    s = Sheet(n, "Common features: clevis, clip, screw holes", "C-01", qty="-",
+    s = Sheet(n, "Common features: clevis, clip, screw holes", "TAL-002", slug="common-features", qty="-",
               frame="link: origin on joint axis, Y = axis")
     s.views(ta.clevis())
     for v in ("front",):
@@ -510,7 +515,7 @@ def sheet_common(n, total):
 
 def sheet_base(n, total):
     parts, _ = ta.base_parts()
-    s = Sheet(n, "Base", "TAL-01", frame="origin plinth bottom centre, Z up, +X = arm front")
+    s = Sheet(n, "Base", "TAL-101", slug="base", frame="origin plinth bottom centre, Z up, +X = arm front")
     s.views(parts["base"])
     s.mass = printed_mass(as_shape(parts["base"]))
     top = ta.H_PAN - 2.8
@@ -554,7 +559,7 @@ def sheet_base(n, total):
 
 def sheet_shoulder(n, total):
     parts, _ = ta.shoulder_parts()
-    s = Sheet(n, "Shoulder (turntable + cradle)", "TAL-02",
+    s = Sheet(n, "Shoulder (turntable + cradle)", "TAL-102", slug="shoulder",
               frame="origin on pan axis at the turntable bottom (= pan horn face), Z up")
     s.views(parts["shoulder"])
     s.mass = printed_mass(as_shape(parts["shoulder"]))
@@ -575,7 +580,7 @@ def sheet_shoulder(n, total):
         "Cradle: box x -17..17, y -18.4..18.4, z 5..34; chamfer 3 on the 4 edges parallel to Y.",
         f"Posts: boxes x -17..-12.9 and 12.9..17, y -18.4..18.4, z 30..{fmt(ta.H_SH + 4)}.",
         "Cheeks: trapezoid (-24,6) (24,6) (14,21) (-14,21) in XZ, extruded y 18.9..25 and y -25..-18.9.",
-        "Cable clip (C-01) on the back face: centre (-17, -9, 21), cable along Z, face normal -X.",
+        "Cable clip (TAL-002) on the back face: centre (-17, -9, 21), cable along Z, face normal -X.",
         servo_place((0, 0, ta.H_SH), "+Y", "+Z (body hangs down)", "+X"),
         "Servo opening: cut box x -12.7..12.7, y -16.2..16.2, z 10..80.",
         "Cable hole: dia 8 along Y, through all, at x = 0, z = 14.",
@@ -596,9 +601,10 @@ def sheet_arm(n, total, upper=True):
     p = dict(h0=30.0, h1=30.8, w_mid=34.0, h_mid=25.0) if upper else \
         dict(h0=28.0, h1=30.8, w_mid=32.0, h_mid=24.0)
     body, _, _ = ta.arm_link(L, **p)
-    name, no, axis = ("Upper arm", "TAL-03", "shoulder") if upper else ("Forearm", "TAL-04", "elbow")
+    name, no, axis = ("Upper arm", "TAL-103", "shoulder") if upper else ("Forearm", "TAL-104", "elbow")
     distal = "elbow" if upper else "wrist flex"
-    s = Sheet(n, name, no, frame=f"origin on the {axis} axis, X to the {distal} axis, Y = axis")
+    s = Sheet(n, name, no, slug=name.lower().replace(" ", "-"),
+              frame=f"origin on the {axis} axis, X to the {distal} axis, Y = axis")
     s.views(body)
     s.mass = printed_mass(as_shape(body))
     x0, x1 = 20.0, L - 36.0
@@ -617,7 +623,7 @@ def sheet_arm(n, total, upper=True):
     s.dim("top", (L, -ta.SHELL_OUT, 0), (L, ta.SHELL_OUT, 0), "v", "right", 1)
     s.dim("top", (xm, -p["w_mid"] / 2, 0), (xm, p["w_mid"] / 2, 0), "v", "right", 2)
     feats = [
-        "Clevis (C-01), reach 30, half-height 15.",
+        "Clevis (TAL-002), reach 30, half-height 15.",
         f"Beam: ruled loft of YZ sections, x {fmt(x0)}: {octagon_text(45.8, p['h0'], 6)}; x {fmt(xm)}: "
         f"{octagon_text(p['w_mid'], p['h_mid'], 5)}; x {fmt(x1)}: {octagon_text(36.8, p['h1'], 6)}.",
         f"Servo shell: XZ polygon ({fmt(L - 34.2)},-15.4) ({fmt(L)},-15.4) ({fmt(L)},15.4) ({fmt(L - 34.2)},15.4) "
@@ -628,9 +634,9 @@ def sheet_arm(n, total, upper=True):
         "(4,h/2+0.2) (2.4,h/2+1.8) (-2.4,h/2+1.8) (-4,h/2+0.2).",
         f"Window 1, cut through Y: {pts_text(wins[0])}.",
         f"Window 2, cut through Y: {pts_text(wins[1])}.",
-        f"Cable clip (C-01) on the -Y flank at the waist: centre ({fmt(xm)}, {fmt(-p['w_mid'] / 2 - 0.2)}, 0), "
+        f"Cable clip (TAL-002) on the -Y flank at the waist: centre ({fmt(xm)}, {fmt(-p['w_mid'] / 2 - 0.2)}, 0), "
         "cable along X.",
-        "Clevis gap cut (C-01).",
+        "Clevis gap cut (TAL-002).",
         servo_place((L, 0, 0), "+Y", "+X", "-Z"),
         f"Servo opening (drops in from below): cut box x {fmt(L - 35.5)}..{fmt(L - 4)}, y -16.2..16.2, z -40..-12.",
         case_screw_text(f"seat 17.3; shaft face (+Y) at (x, z) = ({fmt(L - 29)}, +/-10.2); connector "
@@ -645,7 +651,7 @@ def sheet_arm(n, total, upper=True):
 def sheet_wrist(n, total):
     parts, _ = ta.wrist_parts()
     xs = ta.X_ROLL - 18.7
-    s = Sheet(n, "Wrist", "TAL-05", frame="origin on the wrist flex axis, X along the roll axis, Y = flex axis")
+    s = Sheet(n, "Wrist", "TAL-105", slug="wrist", frame="origin on the wrist flex axis, X along the roll axis, Y = flex axis")
     s.views(parts["wrist"])
     s.mass = printed_mass(as_shape(parts["wrist"]))
     s.dim("front", (20.5, 0, -38.5), (ta.X_ROLL - 2.8, 0, -38.5), "h", "below", 1)
@@ -658,16 +664,16 @@ def sheet_wrist(n, total):
     s.dim("top", (0, -ta.CLV_OUT, 0), (0, ta.CLV_OUT, 0), "v", "left", 1)
     s.dim("top", (ta.X_ROLL - 2.8, -15, 0), (ta.X_ROLL - 2.8, 15, 0), "v", "right", 1)
     feats = [
-        "Clevis (C-01), reach 24, half-height 12.",
+        "Clevis (TAL-002), reach 24, half-height 12.",
         "Bridge lugs: box x 20.5..31, y -22.9..22.9, z -12..12; chamfer 3 on edges parallel to Y.",
         f"Cradle: box x 20.5..{fmt(ta.X_ROLL - 2.8)}, y -15..15, z -38.5..13.6; chamfer 4 on edges parallel to X.",
-        "Cable clip (C-01) on the -Y face: centre (46, -15.2, -30), cable along X.",
-        "Clevis gap cut (C-01).",
+        "Cable clip (TAL-002) on the -Y face: centre (46, -15.2, -30), cable along X.",
+        "Clevis gap cut (TAL-002).",
         servo_place((xs, 0, 0), "+X", "+Z (body hangs down)", "-Y"),
         f"Cradle interior: cut box x {fmt(xs - 16)}..80, y -12.7..12.7, z -36..11.",
         f"Plug bay exit to -Y: cut box x {fmt(xs - 28.5)}..{fmt(xs - 15.5)}, y -18.6..0, z -17.6..-10.6, "
         f"and box x {fmt(xs - 28.5)}..{fmt(xs - 15.5)}, y -30..0, z -17.6..-12.4.",
-        f"Side windows: hex window H({fmt(xs - 8)}, 57, -12, 8) through Y (C-01).",
+        f"Side windows: hex window H({fmt(xs - 8)}, 57, -12, 8) through Y (TAL-002).",
         case_screw_text(f"connector face only, seat 18.0: (y, z) = (+/-10.2, -32.8); hole x "
                         f"{fmt(xs - 18)}..{fmt(xs - 15.9)}, counterbore from x {fmt(xs - 18)} toward -X"),
     ]
@@ -679,7 +685,7 @@ def sheet_wrist(n, total):
 
 def sheet_gripper(n, total):
     parts, _ = ta.gripper_parts()
-    s = Sheet(n, "Gripper body (with fixed jaw)", "TAL-06",
+    s = Sheet(n, "Gripper body (with fixed jaw)", "TAL-106", slug="gripper-body",
               frame="origin on the roll axis at the roll horn face, X forward, Y = jaw pivot axis")
     s.views(parts["gripper"])
     s.mass = printed_mass(as_shape(parts["gripper"]))
@@ -702,7 +708,7 @@ def sheet_gripper(n, total):
         servo_place((ta.XJ, 0, ta.ZJ), "+Y", "+X", "-Z"),
         f"Servo opening (from the top): cut box x {fmt(ta.XJ - 35.5)}..{fmt(ta.XJ - 4)}, y -16.2..16.2, "
         f"z {fmt(ta.ZJ + 12)}..{fmt(ta.ZJ + 30)}.",
-        f"Side windows: hex window H(9, 33, {fmt(ta.ZJ)}, 7) through Y (C-01).",
+        f"Side windows: hex window H(9, 33, {fmt(ta.ZJ)}, 7) through Y (TAL-002).",
         "Grip serrations: 6x triangle (x,0) (x+1.5,-1.6) (x+3,0) for x = 72, 78 ... 102, through Y.",
         "Roll horn: centre dia 7, x -1..7. 4x dia 3.2 at (y, z) = (+/-4.9, +/-4.9), x -1..3.5, "
         "counterbore dia 6.5 x 3.5..7 (M3 x 6 from inside the housing).",
@@ -717,7 +723,7 @@ def sheet_gripper(n, total):
 
 def sheet_jaw(n, total):
     jaw = ta.moving_jaw()
-    s = Sheet(n, "Moving jaw", "TAL-07", frame="origin on the jaw pivot, X along the closed jaw, Y = pivot axis")
+    s = Sheet(n, "Moving jaw", "TAL-107", slug="moving-jaw", frame="origin on the jaw pivot, X along the closed jaw, Y = pivot axis")
     s.views(jaw)
     s.mass = printed_mass(as_shape(jaw))
     s.dim("front", (0, 0, -13), (64, 0, -5.5), "h", "below", 2)
@@ -742,52 +748,55 @@ def sheet_jaw(n, total):
     return s
 
 
-def sheet_caps(n, total):
-    big, small = ta.hub_cap(True), ta.hub_cap(False).translate((40, 0, 0))
-    both = big.union(small)
-    s = Sheet(n, "Hub caps, large (TAL-08) and small (TAL-09)", "TAL-08 / 09", qty="3 + 3",
-              frame="origin centre of the inner face, +Y outward; small cap drawn at x = 40")
-    s.views(both)
-    s.mass = printed_mass(as_shape(ta.hub_cap(True))) + printed_mass(as_shape(ta.hub_cap(False)))
-    s.dim("front", (-12.5, 0, 0), (12.5, 0, 0), "h", "below", 1, prefix="dia ")
-    s.dim("front", (40 - 10.2, 0, 0), (40 + 10.2, 0, 0), "h", "below", 1, prefix="dia ")
-    s.dim("top", (-12.5, 0, 0), (-12.5, 3.4, 0), "v", "left", 1)
-    s.dim("top", (-12.5, 0, 0), (-12.5, 1.8, 0), "v", "left", 2)
-    s.center("front", (0, 0, 0), 12.5)
-    s.center("front", (40, 0, 0), 10.2)
+def sheet_cap(n, total, large=True):
+    cap = ta.hub_cap(large)
+    r, recess, groove, boss = (12.5, 10.4, 9.0, 6.0) if large else (10.2, 3.4, 7.0, 4.5)
+    name, no, slug, side = (("Hub cap, large", "TAL-108", "hub-cap-large", "output side, covers 4 horn screws")
+                            if large else
+                            ("Hub cap, small", "TAL-109", "hub-cap-small", "idler side, covers 1 centre screw"))
+    s = Sheet(n, name, no, slug=slug, qty="3", frame="origin centre of the inner face, +Y outward")
+    s.views(cap)
+    s.mass = printed_mass(as_shape(cap))
+    s.dim("front", (-r, 0, 0), (r, 0, 0), "h", "below", 1, prefix="dia ")
+    s.dim("front", (-recess, 0, 0), (recess, 0, 0), "h", "below", 2, prefix="recess dia ")
+    s.dim("top", (-r, 0, 0), (-r, 3.4, 0), "v", "left", 1)
+    s.dim("top", (-r, 0, 0), (-r, 1.8, 0), "v", "left", 2)
+    s.center("front", (0, 0, 0), r)
     feats = [
-        "* LARGE (output side, covers 4 horn screws):",
-        "Disc dia 25, y 0..3.4; chamfer 0.8 on the outer edge.",
-        "Recess dia 20.8, y 0..1.8 (clears M3 button heads, 1.65 high).",
-        "Face groove: annulus between dia 12 and dia 18, 0.4 deep (y 3.0..3.4).",
-        "* SMALL (idler side, covers 1 centre screw):",
-        "Disc dia 20.4, y 0..3.4; chamfer 0.8 on the outer edge.",
-        "Recess dia 6.8, y 0..1.8.",
-        "Face groove: annulus between dia 9 and dia 14, 0.4 deep.",
+        f"* {name.upper()} ({side}):",
+        f"Disc dia {fmt(2 * r)}, y 0..3.4; chamfer 0.8 on the outer edge.",
+        f"Recess dia {fmt(2 * recess)}, y 0..1.8 (clears M3 button heads, 1.65 high).",
+        f"Face groove: annulus between dia {fmt(2 * boss)} and dia {fmt(2 * groove)}, 0.4 deep (y 3.0..3.4).",
     ]
     y = s.features("FEATURES", feats)
-    s.notes(GENERAL + ["Press-fit or glue onto the clevis plates over the screw heads. Print face down."], y - 2)
+    s.notes(GENERAL + ["Press-fit or glue onto the clevis plate over the screw heads. Print face down."], y - 2)
     s.title_block(total)
     return s
 
 
 SHEETS = [sheet_assembly, sheet_servo, sheet_common, sheet_base, sheet_shoulder,
           lambda n, t: sheet_arm(n, t, True), lambda n, t: sheet_arm(n, t, False),
-          sheet_wrist, sheet_gripper, sheet_jaw, sheet_caps]
+          sheet_wrist, sheet_gripper, sheet_jaw,
+          lambda n, t: sheet_cap(n, t, True), lambda n, t: sheet_cap(n, t, False)]
 
 
 def main():
-    OUT.mkdir(exist_ok=True)
+    """Write the full set as one PDF, plus a PDF and a PNG preview of every sheet."""
+    sheets_dir, preview_dir = OUT / "sheets", OUT / "previews"
+    for d in (OUT, sheets_dir, preview_dir):
+        d.mkdir(exist_ok=True)
     total = len(SHEETS)
-    pdf_path = OUT / "Talos_drawings.pdf"
-    with PdfPages(pdf_path) as pdf:
+    set_path = OUT / f"TAL-000_drawing-set_rev-{REV}.pdf"
+    with PdfPages(set_path) as pdf:
         for i, make in enumerate(SHEETS, start=1):
             s = make(i, total)
+            stem = f"{s.part_no}_{s.slug}_rev-{REV}"
             pdf.savefig(s.fig)
-            s.fig.savefig(OUT / f"{i:02d}_{s.part_no.replace(' ', '').replace('/', '-')}.png", dpi=110)
+            s.fig.savefig(sheets_dir / f"{stem}.pdf")
+            s.fig.savefig(preview_dir / f"{stem}.png", dpi=110)
             plt.close(s.fig)
-            print(f"sheet {i}/{total}: {s.part_no} {s.title}")
-    print(f"wrote {pdf_path}")
+            print(f"sheet {i}/{total}: {stem}")
+    print(f"wrote {set_path}")
 
 
 if __name__ == "__main__":

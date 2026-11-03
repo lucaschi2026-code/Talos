@@ -12,19 +12,34 @@ Parametric CadQuery model of the Talos 5-axis arm plus gripper, exported as a fu
 | `talos_arm_zero.step` | Same assembly with every joint at 0 (arm straight up) |
 | `talos_arm.py` | Generator. All dimensions and poses live at the top |
 | `render.py` | Renders PNG views into `renders/` and checks every part pair for interference |
-| `drawings/Talos_drawings.pdf` | Technical drawing set, 11 A3 sheets: everything needed to rebuild each part by hand |
+| `drawings/TAL-000_drawing-set_rev-A.pdf` | Full technical drawing set, 12 A3 sheets: everything needed to rebuild each part by hand |
+| `drawings/sheets/`, `drawings/previews/` | The same sheets one per file: PDF, plus a PNG preview |
 | `drawings.py` | Generates the drawing set from `talos_arm.py`, so the drawings always match the model |
 
 ## Drawings
 
-[`drawings/Talos_drawings.pdf`](drawings/Talos_drawings.pdf) has one sheet per printed part, plus three shared sheets. There's also a PNG of each sheet in the same folder.
+[`drawings/TAL-000_drawing-set_rev-A.pdf`](drawings/TAL-000_drawing-set_rev-A.pdf) is the full set. Each sheet is also saved on its own in [`drawings/sheets/`](drawings/sheets) as a PDF, and in [`drawings/previews/`](drawings/previews) as a PNG.
 
-| Sheet | Contents |
-| --- | --- |
-| 1 TAL-A00 | General assembly (zero pose), joint layout heights, parts list and hardware |
-| 2 REF-01 | STS3215 servo reference and the **servo pocket P** that every part cuts |
-| 3 C-01 | Common features: clevis plates, horn and case screw holes, cable clip, hex window |
-| 4–11 | TAL-01 base, TAL-02 shoulder, TAL-03 upper arm, TAL-04 forearm, TAL-05 wrist, TAL-06 gripper body, TAL-07 moving jaw, TAL-08/09 hub caps |
+**Numbering:**
+- **TAL-0xx:** assembly and reference sheets.
+- **TAL-1xx:** printed parts, numbered in build order from the base to the gripper.
+- **File names:** `<part no>_<name>_rev-<rev>`, for example `TAL-103_upper-arm_rev-A.pdf`.
+- **Revisions:** the title block carries the revision letter. Bump `REV` in `drawings.py` when a released drawing changes.
+
+| Part no. | Sheet | Contents |
+| --- | --- | --- |
+| TAL-000 | General assembly | Zero-pose assembly, joint heights, parts list and hardware |
+| TAL-001 | Servo pocket reference | STS3215 servo and the **servo pocket P** that every part cuts |
+| TAL-002 | Common features | Clevis plates, horn and case screw holes, cable clip, hex window |
+| TAL-101 | Base | |
+| TAL-102 | Shoulder | Turntable + cradle |
+| TAL-103 | Upper arm | |
+| TAL-104 | Forearm | |
+| TAL-105 | Wrist | |
+| TAL-106 | Gripper body | With the fixed jaw |
+| TAL-107 | Moving jaw | |
+| TAL-108 | Hub cap, large | ×3 |
+| TAL-109 | Hub cap, small | ×3 |
 
 Each part sheet has:
 - front, top and right views in third-angle projection, with hidden lines dashed
