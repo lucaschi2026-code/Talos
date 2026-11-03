@@ -1,7 +1,5 @@
 # Robotic Arm Build Plan
 
-Oct 2, 2026 · @ryan
-
 Design and build an original 5-axis desktop arm with a gripper, demo-ready by Dec 6, 2026 and fully documented by Dec 31 — about 8 hours a week each and roughly CA$350 total.
 
 ## At a glance
