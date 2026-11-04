@@ -52,7 +52,14 @@ VIEWS = {"front": ((0, -1, 0), (1, 0, 0)), "top": ((0, 0, 1), (1, 0, 0)),
 LABELS = {"front": "FRONT", "top": "TOP", "right": "RIGHT", "iso": "ISOMETRIC (NOT TO SCALE)"}
 TODAY = datetime.date.today().isoformat()
 REV = "A"                                   # bump when a released drawing changes
-DIM_PT, NOTE_PT = 8.5, 7.5                  # dimension and leader-note text size, points
+DIM_PT, NOTE_PT = 9.5, 8.5                  # dimension and leader-note text size, points
+LABEL_PT = 10.0                             # view labels
+# Right column: the feature list is set as large as fits, from COL_PT_MAX down to COL_PT_MIN.
+COL_PT_MAX, COL_PT_MIN = 8.6, 6.4
+COL_W = 128.0                               # right column width, mm
+TB_H = 62.0                                 # title block height, mm (incl. the work-set row)
+COL_FLOOR = 14.0 + TB_H + 12.0              # lowest y the column text may reach (above the symbol)
+MONO_W, SANS_W = 0.635, 0.57                # average character width, em
 
 # Part numbering: TAL-0xx = assembly and reference sheets, TAL-1xx = printed parts,
 # numbered base to tip. Files are named <part no>_<slug>_rev-<rev>.
@@ -166,6 +173,7 @@ class Sheet:
         self.scale_label = "-"
         self.mass = None
         self.n_features = 0
+        self.column = []  # right-column blocks, laid out in title_block() once all are known
 
     # ---- views
     def views(self, shape, hidden=True, iso=True, iso_shape=None, region=REGION, gap_right=0.0):
@@ -222,8 +230,8 @@ class Sheet:
 
     def _labels(self):
         for view, (_, _, _, bb) in self.place.items():
-            self.ax.text((bb[0] + bb[2]) / 2, self.low[view] - 4.0, LABELS[view],
-                         ha="center", va="top", fontsize=8.5, weight="bold")
+            self.ax.text((bb[0] + bb[2]) / 2, self.low[view] - 4.5, LABELS[view],
+                         ha="center", va="top", fontsize=LABEL_PT, weight="bold")
 
     def P(self, view, p):
         origin, s, mn, _ = self.place[view]
@@ -297,67 +305,93 @@ class Sheet:
                    ls=(0, (6, 1.5, 1, 1.5)))
 
     # ---- right column
-    def features(self, heading, items, y_top=283.0, width=96):
-        ax, y = self.ax, y_top
-        ax.text(COL_X, y, heading, fontsize=7.2, weight="bold", va="top")
-        y -= 4.6
-        count = 0
-        for item in items:
-            numbered = not item.startswith(("-", "*"))
-            count += numbered
-            self.n_features += numbered
-            prefix = f"{count:>2}. " if numbered else "    "
-            body = item.lstrip("-* ")
-            lines = textwrap.wrap(body, width - len(prefix)) or [""]
-            for j, line in enumerate(lines):
-                ax.text(COL_X, y, (prefix if j == 0 else " " * len(prefix)) + line, fontsize=5.6,
-                        va="top", family="DejaVu Sans Mono")
-                y -= 2.5
-            y -= 0.5
-        return y
+    def features(self, heading, items, y_top=None):
+        """Queue a numbered list for the right column. Items starting '-' or '*' are unnumbered."""
+        self.n_features += sum(not it.startswith(("-", "*")) for it in items)
+        self.column.append(("list", heading, items))
 
-    def notes(self, items, y):
-        self.ax.text(COL_X, y, "NOTES", fontsize=6.4, weight="bold", va="top")
-        y -= 3.6
-        for line in items:
-            for k, w in enumerate(textwrap.wrap(line, 100)):
-                self.ax.text(COL_X, y, ("- " if k == 0 else "  ") + w, fontsize=5.0, va="top")
-                y -= 2.2
-        return y
+    def notes(self, items, y=None):
+        self.column.append(("notes", "NOTES", items))
+
+    def _column_lines(self, pt):
+        """Lay out the column at body size pt: [(kind, text, size, y_step)], total height mm."""
+        mm = pt / PT
+        mono_chars = int(COL_W / (MONO_W * mm))
+        npt = 0.92 * pt
+        sans_chars = int((COL_W - 2) / (SANS_W * npt / PT))
+        out, h = [], 0.0
+        for k, (kind, heading, items) in enumerate(self.column):
+            if k:
+                h += 1.2 * mm
+            hpt = 1.2 * pt
+            out.append(("head", heading, hpt, h))
+            h += 1.6 * hpt / PT
+            count = 0
+            for item in items:
+                if kind == "list":
+                    numbered = not item.startswith(("-", "*"))
+                    count += numbered
+                    prefix = f"{count:>2}. " if numbered else "    "
+                    lines = textwrap.wrap(item.lstrip("-* "), mono_chars - len(prefix)) or [""]
+                    for j, line in enumerate(lines):
+                        out.append(("mono", (prefix if j == 0 else " " * len(prefix)) + line, pt, h))
+                        h += 1.25 * mm
+                    h += 0.3 * mm
+                else:
+                    for j, line in enumerate(textwrap.wrap(item, sans_chars)):
+                        out.append(("sans", ("- " if j == 0 else "  ") + line, npt, h))
+                        h += 1.25 * npt / PT
+        return out, h
+
+    def _draw_column(self, y_top=283.0):
+        pt = COL_PT_MAX
+        while pt > COL_PT_MIN:
+            if y_top - self._column_lines(pt)[1] >= COL_FLOOR:
+                break
+            pt = round(pt - 0.2, 1)
+        lines, h = self._column_lines(pt)
+        if y_top - h < COL_FLOOR:
+            print(f"  warning: {self.part_no} column runs {COL_FLOOR - (y_top - h):.1f} mm into the title block")
+        for kind, text, size, dy in lines:
+            kw = {"head": dict(weight="bold"), "mono": dict(family="DejaVu Sans Mono"), "sans": {}}[kind]
+            self.ax.text(COL_X, y_top - dy, text, fontsize=size, va="top", **kw)
+        self.column_pt = pt
 
     def title_block(self, total):
         self._labels()
+        self._draw_column()
         ax = self.ax
-        x0, y0, w, h = COL_X, 14.0, 128.0, 44.0
+        x0, y0, w, h = COL_X, 14.0, COL_W, TB_H
+        tag_h = 9.0
         ax.add_patch(Rectangle((x0, y0), w, h, fill=False, lw=0.5 * PT))
+        # work-set row across the top, so a loose sheet says whose it is
+        ws = work_set(self.part_no)
+        tag = f"WORK SET {ws}:  {WORK_SETS[ws][1]}" if ws else "REFERENCE SHEET:  in work sets A and B"
+        ax.add_patch(Rectangle((x0, y0 + h - tag_h), w, tag_h, fill=ws is not None, fc="0.88",
+                               lw=0.25 * PT))
+        ax.text(x0 + 2.0, y0 + h - tag_h / 2, tag, fontsize=9.0, va="center", weight="bold")
         rows = [("PROJECT", "TALOS 5-axis arm"), ("PART", self.title), ("PART NO.", self.part_no),
                 ("QTY / ARM", self.qty), ("MATERIAL", self.material),
                 ("EST. MASS", f"{self.mass:.0f} g" if self.mass is not None else "-"),
                 ("SCALE", self.scale_label), ("UNITS / REV", f"mm / {REV}"), ("DATE", TODAY),
                 ("SHEET", f"{self.number} of {total}")]
-        rh = h / 5
+        rh = (h - tag_h) / 5
         for i, (k, v) in enumerate(rows):
             col, row = divmod(i, 5)
             cx = x0 + col * w / 2
-            cy = y0 + h - (row + 1) * rh
+            cy = y0 + h - tag_h - (row + 1) * rh
             ax.add_patch(Rectangle((cx, cy), w / 2, rh, fill=False, lw=0.25 * PT))
-            ax.text(cx + 1.2, cy + rh - 1.0, k, fontsize=4.2, va="top", color="0.35")
-            ax.text(cx + 1.2, cy + 1.3, v, fontsize=6.0 if len(v) < 30 else 4.8, va="bottom",
+            ax.text(cx + 1.5, cy + rh - 1.0, k, fontsize=5.8, va="top", color="0.35")
+            size = 9.0 if len(v) <= 24 else (7.6 if len(v) <= 32 else 6.4)
+            ax.text(cx + 1.5, cy + 1.4, v, fontsize=size, va="bottom",
                     weight="bold" if k in ("PART", "PART NO.") else "normal")
         # third-angle symbol
-        sx, sy = x0 + w - 16, y0 + h + 3.5
+        sx, sy = x0 + w - 16, y0 + h + 5.0
         ax.add_patch(Polygon([(sx, sy - 2.2), (sx + 5, sy - 3.2), (sx + 5, sy + 3.2), (sx, sy + 2.2)],
                              fill=False, lw=0.3 * PT))
         for r in (1.6, 3.2):
             ax.add_patch(plt.Circle((sx + 11, sy), r, fill=False, lw=0.3 * PT))
-        ax.text(sx - 2, sy, "THIRD ANGLE", fontsize=4.5, ha="right", va="center")
-        # work-set tag, so a loose sheet says whose it is
-        ws = work_set(self.part_no)
-        tag = f"WORK SET {ws}: {WORK_SETS[ws][1]}" if ws else "REFERENCE: in work sets A and B"
-        ax.add_patch(Rectangle((x0, sy - 3.0), 66, 6.0, fill=ws is not None, fc="0.88",
-                               lw=0.3 * PT))
-        ax.text(x0 + 1.5, sy, tag, fontsize=5.6 if ws else 5.2, va="center",
-                weight="bold" if ws else "normal")
+        ax.text(sx - 2, sy, "THIRD ANGLE PROJECTION", fontsize=7.0, ha="right", va="center")
 
 
 # ---------------------------------------------------------------- shared feature text
@@ -444,9 +478,9 @@ def sheet_assembly(n, total):
         "Clevis plates on every pitch joint: output plate +Y (y 18.9..22.9), idler plate -Y (y -22.9..-18.9).",
         "Front view: zero pose (all joints 0, arm straight up). Isometric: 'ready' pose.",
     ]
-    y = s.features("PARTS LIST (set = work set, A or B)", bom)
-    y = s.features("JOINT LAYOUT", layout, y_top=y - 2)
-    s.notes(GENERAL[:1] + ["Part sheets give each part in its own frame; this sheet shows where those frames sit."], y - 2)
+    s.features("PARTS LIST (set = work set, A or B)", bom)
+    s.features("JOINT LAYOUT", layout)
+    s.notes(GENERAL[:1] + ["Part sheets give each part in its own frame; this sheet shows where those frames sit."])
     s.title_block(total)
     return s
 
@@ -487,10 +521,10 @@ def sheet_servo(n, total):
         "- d) idler clearance cylinder dia 21.6, z -18.5..-15.0, on the shaft axis",
         "- e) horn clearance cylinder dia 21.6, z 15.0..19.5, on the shaft axis",
     ]
-    y = s.features("FEATURES (servo frame)", feats)
+    s.features("FEATURES (servo frame)", feats)
     s.notes(["Measured from the SO-ARM100 STS3215 reference model and Feetech's drawing. Check the "
              "connector position and case-hole depth on a real servo.",
-             "Each part sheet says where its pocket's servo frame sits and how it is rotated."], y - 2)
+             "Each part sheet says where its pocket's servo frame sits and how it is rotated."])
     s.title_block(total)
     return s
 
@@ -504,7 +538,7 @@ def sheet_common(n, total):
     s.dim("front", (0, 0, -15), (30, 0, -15), "h", "below", 1)
     s.dim("front", (-16, 0, -15), (-16, 0, 15), "v", "left", 1)
     s.note("front", (16 * math.cos(math.radians(-120)), 0, 16 * math.sin(math.radians(-120))),
-           "R16 output hub (+Y plate)", -6, -20)
+           "R16 output hub (+Y plate)", 8, -22)
     s.note("front", (10.5 * math.cos(math.radians(-60)), 0, 10.5 * math.sin(math.radians(-60))),
            "R10.5 idler hub (-Y plate)", 16, -34)
     s.dim("top", (-16, ta.CLV_IN, 0), (-16, ta.CLV_OUT, 0), "v", "left", 1)
@@ -532,8 +566,8 @@ def sheet_common(n, total):
         "* HEX WINDOW H(xa, xb, zc, k): hexagon (xa,zc) (xa+k,zc-k) (xb-k,zc-k) (xb,zc) (xb-k,zc+k) "
         "(xa+k,zc+k), cut through the part along Y.",
     ]
-    y = s.features("COMMON FEATURES", feats)
-    s.notes(GENERAL, y - 2)
+    s.features("COMMON FEATURES", feats)
+    s.notes(GENERAL)
     s.title_block(total)
     return s
 
@@ -576,8 +610,8 @@ def sheet_base(n, total):
         case_screw_text("connector face only, screws from below: (x, y) = (-32.8, +/-10.2); hole "
                         "z 24.9..27.5, counterbore z -1.7..24.9 (opens on the bottom)"),
     ]
-    y = s.features("FEATURES (in order)", feats)
-    s.notes(GENERAL + ["The pan servo drops in from the top; its plugs hang into the bay under it."], y - 2)
+    s.features("FEATURES (in order)", feats)
+    s.notes(GENERAL + ["The pan servo drops in from the top; its plugs hang into the bay under it."])
     s.title_block(total)
     return s
 
@@ -599,7 +633,7 @@ def sheet_shoulder(n, total):
     s.dim("top", (-24, -25, 0), (-24, 25, 0), "v", "left", 1)
     s.dim("top", (-17, -18.4, 0), (-17, 18.4, 0), "v", "left", 2)
     s.center("top", (0, 0, 0), 37)
-    s.note("top", (30, 0, 0), "4x arc window R27-R33, 36 deg", 18, -14)
+    s.note("top", (30, 0, 0), "4x arc window R27-R33, 36 deg", 16, -26)
     feats = [
         "Turntable: cylinder dia 74, z 0..6; chamfer 2 top edge, 0.8 bottom edge.",
         "Cradle: box x -17..17, y -18.4..18.4, z 5..34; chamfer 3 on the 4 edges parallel to Y.",
@@ -615,8 +649,8 @@ def sheet_shoulder(n, total):
         case_screw_text("seat 18.5, through the cheeks: shaft face at (x, z) = (+/-10.2, 17), y +15.9..+18.5; "
                         "connector face at (+/-10.2, 13.2), y -18.5..-15.9"),
     ]
-    y = s.features("FEATURES (in order)", feats)
-    s.notes(GENERAL, y - 2)
+    s.features("FEATURES (in order)", feats)
+    s.notes(GENERAL)
     s.title_block(total)
     return s
 
@@ -667,8 +701,8 @@ def sheet_arm(n, total, upper=True):
         case_screw_text(f"seat 17.3; shaft face (+Y) at (x, z) = ({fmt(L - 29)}, +/-10.2); connector "
                         f"face (-Y) at ({fmt(L - 32.8)}, +/-10.2)"),
     ]
-    y = s.features("FEATURES (in order)", feats)
-    s.notes(GENERAL + [f"The {distal} servo's bus plugs come out through the -Y shell wall."], y - 2)
+    s.features("FEATURES (in order)", feats)
+    s.notes(GENERAL + [f"The {distal} servo's bus plugs come out through the -Y shell wall."])
     s.title_block(total)
     return s
 
@@ -702,8 +736,8 @@ def sheet_wrist(n, total):
         case_screw_text(f"connector face only, seat 18.0: (y, z) = (+/-10.2, -32.8); hole x "
                         f"{fmt(xs - 18)}..{fmt(xs - 15.9)}, counterbore from x {fmt(xs - 18)} toward -X"),
     ]
-    y = s.features("FEATURES (in order)", feats)
-    s.notes(GENERAL + ["Fit the roll servo's case screws before the gripper goes on."], y - 2)
+    s.features("FEATURES (in order)", feats)
+    s.notes(GENERAL + ["Fit the roll servo's case screws before the gripper goes on."])
     s.title_block(total)
     return s
 
@@ -740,8 +774,8 @@ def sheet_gripper(n, total):
         case_screw_text("seat 17.3; shaft face (+Y) at (x, z) = (13, -4.2) and (13, 16.2); connector "
                         "face (-Y) at (9.2, -4.2) and (9.2, 16.2)"),
     ]
-    y = s.features("FEATURES (in order)", feats)
-    s.notes(GENERAL + ["The jaw servo's bus plugs come out through the -Y housing wall."], y - 2)
+    s.features("FEATURES (in order)", feats)
+    s.notes(GENERAL + ["The jaw servo's bus plugs come out through the -Y housing wall."])
     s.title_block(total)
     return s
 
@@ -766,9 +800,9 @@ def sheet_jaw(n, total):
         "Grip serrations: 6x triangle (x,-5.5) (x+1.5,-3.9) (x+3,-5.5) for x = 30, 36 ... 60, through Y.",
         "Horn holes through the plate: centre dia 7 + 4x dia 3.2 at (x, z) = (+/-4.9, +/-4.9).",
     ]
-    y = s.features("FEATURES (in order)", feats)
+    s.features("FEATURES (in order)", feats)
     s.notes(GENERAL + ["Bolts to the jaw servo's output horn with 4x M3 x 6; closed position is "
-                       "jaw X along the gripper X."], y - 2)
+                       "jaw X along the gripper X."])
     s.title_block(total)
     return s
 
@@ -793,8 +827,8 @@ def sheet_cap(n, total, large=True):
         f"Recess dia {fmt(2 * recess)}, y 0..1.8 (clears M3 button heads, 1.65 high).",
         f"Face groove: annulus between dia {fmt(2 * boss)} and dia {fmt(2 * groove)}, 0.4 deep (y 3.0..3.4).",
     ]
-    y = s.features("FEATURES", feats)
-    s.notes(GENERAL + ["Press-fit or glue onto the clevis plate over the screw heads. Print face down."], y - 2)
+    s.features("FEATURES", feats)
+    s.notes(GENERAL + ["Press-fit or glue onto the clevis plate over the screw heads. Print face down."])
     s.title_block(total)
     return s
 
