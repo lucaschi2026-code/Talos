@@ -19,11 +19,11 @@ L_tip = 0.169;  % wrist-flex axis -> gripper tip (63 mm wrist + 106 mm gripper)
 %% Masses (kg), in this order: upper arm, forearm, wrist, gripper, payload
 names = ["upper arm + elbow servo", "forearm + wrist-flex servo", ...
          "wrist + wrist-roll servo", "gripper + jaw servo", "payload"];
-m     = [0.115, 0.119, 0.093, 0.103, 0.200];
+m     = [0.114, 0.119, 0.093, 0.101, 0.200];
 
 % Centre-of-mass offsets (m), each measured from the START of its own segment
-d_upper   = 0.0819;     % from shoulder axis (elbow servo pulls COM toward the elbow)
-d_fore    = 0.0954;     % from elbow axis
+d_upper   = 0.0805;     % from shoulder axis (elbow servo pulls COM toward the elbow)
+d_fore    = 0.0934;     % from elbow axis
 d_wrist   = 0.0376;     % from wrist-flex axis
 d_gripper = 0.1017;     % from wrist-flex axis
 d_payload = L_tip;      % from wrist-flex axis (held at the tip)

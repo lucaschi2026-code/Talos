@@ -549,6 +549,20 @@ def main():
         w(f"| {joint} | {tau:.2f} | {F:.0f} | {sb:.1f} | {BEARING_ALLOW/sb:.1f} |")
     w(f"\nPlate thickness {t_plate:.1f} mm, M{HORN_SCREW_D:.0f} screws on a {2*HORN_SCREW_R:.0f} mm "
       f"circle, allowable {BEARING_ALLOW:.0f} MPa.\n")
+    # separate idler plates (TAL-110): two M3 into the beam; worst case they carry the whole joint reaction
+    n_tab = len(ta.IDLER_TAB_SCREWS)
+    w("The idler plates on the upper arm and forearm are a separate part (TAL-110), held by "
+      f"{n_tab} M3 screws into the beam. They only support the passive horn, so worst case "
+      "they carry the whole joint reaction (everything beyond the joint plus the payload), "
+      "doubled for dynamics:\n")
+    w("| Idler plate | Joint reaction x2 (N) | Force per screw (N) | Bearing stress (MPa) | Safety factor |")
+    w("| --- | --- | --- | --- | --- |")
+    for link, joint in (("upper_arm_link", "shoulder"), ("forearm_link", "elbow")):
+        idx = ta.LINKS.index(link)
+        F = 2 * (sum(link_mass(parts, l) for l in ta.LINKS[idx:]) + PAYLOAD) * G
+        sb = F / n_tab / (HORN_SCREW_D * t_plate)
+        w(f"| {link} ({joint}) | {F:.1f} | {F/n_tab:.1f} | {sb:.2f} | {BEARING_ALLOW/sb:.0f} |")
+    w("")
 
     # --- gripper
     w("## 8. Gripper\n")
