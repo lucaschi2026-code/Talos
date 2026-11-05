@@ -42,8 +42,11 @@ REGION = (14.0, 14.0, 272.0, 283.0)         # view area (x0, y0, x1, y1)
 COL_X = 278.0                               # right column: feature list + title block
 # Dimensions go on the outer sides only (front: below/left, top: above, right view: right),
 # so the gaps between views stay small. Margins leave room for up to 3 dimension levels.
-M_LEFT, M_BOTTOM, M_TOP, M_RIGHT = 31.0, 35.0, 33.0, 22.0
-GAP_FT, GAP_FR = 18.0, 30.0                 # front -> top, front -> right
+DIM_PT, NOTE_PT = 16.0, 12.0                # dimension and leader-note text size, points
+DIM_STEP = DIM_PT / 72 * 25.4 + 6.0         # spacing between dimension levels, mm
+M_LEFT, M_BOTTOM, M_TOP, M_RIGHT = (3 * DIM_STEP + 6, 3 * DIM_STEP + 12, 3 * DIM_STEP + 6,
+                                    2 * DIM_STEP + 6)
+GAP_FT, GAP_FR = 20.0, 32.0                 # front -> top, front -> right
 PT = 72 / 25.4                              # points per mm
 SCALES = [(5, "5:1"), (4, "4:1"), (3, "3:1"), (2, "2:1"), (1.5, "3:2"), (1, "1:1"), (2 / 3, "2:3"), (0.5, "1:2"),
           (0.4, "1:2.5"), (1 / 3, "1:3"), (0.25, "1:4"), (0.2, "1:5")]
@@ -52,8 +55,7 @@ VIEWS = {"front": ((0, -1, 0), (1, 0, 0)), "top": ((0, 0, 1), (1, 0, 0)),
 LABELS = {"front": "FRONT", "top": "TOP", "right": "RIGHT", "iso": "ISOMETRIC (NOT TO SCALE)"}
 TODAY = datetime.date.today().isoformat()
 REV = "A"                                   # bump when a released drawing changes
-DIM_PT, NOTE_PT = 9.5, 8.5                  # dimension and leader-note text size, points
-LABEL_PT = 10.0                             # view labels
+LABEL_PT = 12.0                             # view labels
 # Right column: the feature list is set as large as fits, from COL_PT_MAX down to COL_PT_MIN.
 COL_PT_MAX, COL_PT_MIN = 8.6, 6.4
 COL_W = 128.0                               # right column width, mm
@@ -174,6 +176,7 @@ class Sheet:
         self.mass = None
         self.n_features = 0
         self.column = []  # right-column blocks, laid out in title_block() once all are known
+        self.note_texts = []  # (view, text) of leader notes, for the layout check
 
     # ---- views
     def views(self, shape, hidden=True, iso=True, iso_shape=None, region=REGION, gap_right=0.0):
@@ -206,7 +209,7 @@ class Sheet:
         if iso:
             vis, _ = hlr(as_shape(iso_shape) if iso_shape is not None else shape, "iso", hidden=False)
             mn, mx = extents(vis)
-            cx0 = left + s * size["front"][0] + 27          # clear of the top view's right dims
+            cx0 = left + s * size["front"][0] + 2 * DIM_STEP + 4   # clear of the top view's right dims
             cy0 = max(origin["top"][1], bottom + s * size["front"][1] + 8)
             if x1 - cx0 < 60:                                # no room beside the top view: go above it
                 cx0, cy0 = origin["right"][0], origin["top"][1]
@@ -230,7 +233,7 @@ class Sheet:
 
     def _labels(self):
         for view, (_, _, _, bb) in self.place.items():
-            self.ax.text((bb[0] + bb[2]) / 2, self.low[view] - 4.5, LABELS[view],
+            self.ax.text((bb[0] + bb[2]) / 2, self.low[view] - 5.0, LABELS[view],
                          ha="center", va="top", fontsize=LABEL_PT, weight="bold")
 
     def P(self, view, p):
@@ -246,8 +249,8 @@ class Sheet:
     def _arrow(self, tip, direction):
         d = unit(direction)
         n = np.array([-d[1], d[0]])
-        base = np.array(tip) - 2.8 * d
-        self.ax.add_patch(Polygon([tip, base + 0.75 * n, base - 0.75 * n], closed=True,
+        base = np.array(tip) - 3.6 * d
+        self.ax.add_patch(Polygon([tip, base + 1.0 * n, base - 1.0 * n], closed=True,
                                   color="k", lw=0))
 
     def dim(self, view, p1, p2, axis, side, level=1, text=None, prefix="", suffix=""):
@@ -258,17 +261,27 @@ class Sheet:
         k = 0 if axis == "h" else 1
         value = abs(u2[k] - u1[k])
         label = text if text is not None else f"{prefix}{fmt(value)}{suffix}"
-        step = 9.0
+        step = DIM_STEP
+        span = abs(b[k] - a[k])
+        text_w = len(label) * 0.62 * DIM_PT / PT
+        flip = span < 2 * 3.6 + 1.0             # too short for inside arrows: put them outside
+        outside = text_w + 3.0 > span           # label doesn't fit between the arrows: put it past the end
+        lo, hi = sorted((a[k], b[k]))
         if axis == "h":
             y = bb[3] + step * level if side == "above" else bb[1] - step * level
             sgn = 1 if side == "above" else -1
             for p in (a, b):
                 self._line((p[0], p[1] + sgn * 1.0), (p[0], y + sgn * 1.2))
-            self._line((a[0], y), (b[0], y))
-            if abs(b[0] - a[0]) > 0.5:
-                self._arrow((a[0], y), (a[0] - b[0], 0))
-                self._arrow((b[0], y), (b[0] - a[0], 0))
-            self.ax.text((a[0] + b[0]) / 2, y + 0.9, label, ha="center", va="bottom", fontsize=DIM_PT)
+            ext = 5.0 if flip else 0.0
+            self._line((lo - ext, y), (hi + (max(ext, text_w + 5.0) if outside else ext), y))
+            if span > 0.5:
+                for tip, other in ((lo, hi), (hi, lo)):
+                    self._arrow((tip, y), ((other - tip) if flip else (tip - other), 0))
+            if outside:
+                self.ax.text(hi + (6.0 if flip else 2.5), y + 1.2, label, ha="left", va="bottom",
+                             fontsize=DIM_PT)
+            else:
+                self.ax.text((lo + hi) / 2, y + 1.2, label, ha="center", va="bottom", fontsize=DIM_PT)
             if side == "below":
                 self.low[view] = min(self.low[view], y - 1.5)
         else:
@@ -276,12 +289,17 @@ class Sheet:
             sgn = 1 if side == "right" else -1
             for p in (a, b):
                 self._line((p[0] + sgn * 1.0, p[1]), (x + sgn * 1.2, p[1]))
-            self._line((x, a[1]), (x, b[1]))
-            if abs(b[1] - a[1]) > 0.5:
-                self._arrow((x, a[1]), (0, a[1] - b[1]))
-                self._arrow((x, b[1]), (0, b[1] - a[1]))
-            self.ax.text(x - 0.9, (a[1] + b[1]) / 2, label, ha="right", va="center", fontsize=DIM_PT,
-                         rotation=90)
+            ext = 5.0 if flip else 0.0
+            self._line((x, lo - (max(ext, text_w + 5.0) if outside else ext)), (x, hi + ext))
+            if span > 0.5:
+                for tip, other in ((lo, hi), (hi, lo)):
+                    self._arrow((x, tip), (0, (other - tip) if flip else (tip - other)))
+            if outside:                            # below the lower end
+                self.ax.text(x - 1.2, lo - (6.0 if flip else 2.5), label, ha="right", va="top",
+                             fontsize=DIM_PT, rotation=90)
+            else:
+                self.ax.text(x - 1.2, (lo + hi) / 2, label, ha="right", va="center", fontsize=DIM_PT,
+                             rotation=90)
 
     def note(self, view, p, text, dx, dy):
         a = self.P(view, p)
@@ -290,9 +308,10 @@ class Sheet:
         self._arrow(a, a - b)
         end = b + np.array([3.0 if dx >= 0 else -3.0, 0])
         self._line(b, end)
-        self.ax.text(end[0] + (0.8 if dx >= 0 else -0.8), end[1], text, fontsize=NOTE_PT,
-                     ha="left" if dx >= 0 else "right", va="center")
-        self.low[view] = min(self.low[view], end[1] - 2.5)
+        t = self.ax.text(end[0] + (0.8 if dx >= 0 else -0.8), end[1], text, fontsize=NOTE_PT,
+                         ha="left" if dx >= 0 else "right", va="center")
+        self.note_texts.append((view, t))
+        self.low[view] = min(self.low[view], end[1] - 3.5)
 
     def center(self, view, p, r=4.0):
         a = self.P(view, p)
@@ -438,7 +457,7 @@ def sheet_assembly(n, total):
               frame="world: base bottom centre, Z up, arm reaches +X")
     zero = cq.Compound.makeCompound([sh for _, sh, _ in ta.flatten(ta.build(ta.POSES["zero"]))])
     ready = cq.Compound.makeCompound([sh for _, sh, _ in ta.flatten(ta.build(ta.POSES["ready"]))])
-    s.views(zero, hidden=False, iso_shape=ready, gap_right=26)
+    s.views(zero, hidden=False, iso_shape=ready, gap_right=5 * DIM_STEP + 10 - GAP_FR)
     h = [("pan horn face", ta.H_PAN), ("shoulder axis", ta.H_PAN + ta.H_SH),
          ("elbow axis", ta.H_PAN + ta.H_SH + ta.L1), ("wrist flex axis", ta.H_PAN + ta.H_SH + ta.L1 + ta.L2),
          ("roll horn face", ta.H_PAN + ta.H_SH + ta.L1 + ta.L2 + ta.X_ROLL)]
@@ -500,7 +519,7 @@ def sheet_servo(n, total):
     s.center("front", (0, 0, 0), 3)
     s.center("top", (0, 0, 0), 11)
     s.note("top", (6.93 * math.cos(math.radians(45)), 6.93 * math.sin(math.radians(45)), 0),
-           "horn: 4x dia 2.5 (M3) on PCD 13.86, 45 deg", 14, 12)
+           "horn: 4x dia 2.5 (M3)\non PCD 13.86, 45 deg", -6, 22)
     s.note("front", (-14.1, 0, -26.0), "mated bus plugs", -12, -6)
     feats = [
         "Body: box x -35.2..10.2, y -12.4..12.4, z -14.4..14.4 (45.4 x 24.8 x 28.8). +X end vertical "
@@ -581,7 +600,7 @@ def sheet_base(n, total):
     s.dim("front", (-100, 0, 0), (-100, 0, 10), "v", "left", 1)
     s.dim("front", (-100, 0, 0), (-40, 0, top), "v", "left", 2)
     s.note("front", (40, 0, top - 8), "column dia 80", 14, 6)
-    s.note("front", (45, 0, 12), "collar dia 90 x 4", 18, 10)
+    s.note("front", (45, 0, 12), "collar dia 90 x 4", 16, -20)
     s.dim("top", (-85.5, 18.5, 0), (-57.5, 18.5, 0), "h", "above", 1)
     s.dim("top", (-57.5, 18.5, 0), (0, 18.5, 0), "h", "above", 2)
     s.dim("top", (-100, 0, 0), (66, 0, 0), "h", "above", 3)
@@ -589,9 +608,9 @@ def sheet_base(n, total):
     s.dim("top", (-85.5, -18.5, 0), (-85.5, 18.5, 0), "v", "left", 2)
     s.center("top", (0, 0, 0), 40)
     a = math.radians(45)
-    s.note("top", (54 * math.cos(a), 54 * math.sin(a), 0), "4x dia 4.4 thru, cbore dia 8.4 x 3.5, on R54", 10, 8)
+    s.note("top", (54 * math.cos(a), -54 * math.sin(a), 0), "4x dia 4.4 thru, cbore\ndia 8.4 x 3.5, on R54", 22, 4)
     s.note("top", (41.4 * math.cos(math.radians(-50)), 41.4 * math.sin(math.radians(-50)), 0),
-           "18x flute R2.6 on R41.4", 12, -10)
+           "18x flute R2.6 on R41.4", 12, -14)
     feats = [
         "Plinth: regular 12-gon, circumscribed dia 132 (a corner on +X), extrude z 0..10.",
         "Board deck: polygon (-40,-32) (-88,-32) (-100,-20) (-100,20) (-88,32) (-40,32), extrude z 0..10; "
@@ -755,7 +774,7 @@ def sheet_gripper(n, total):
     s.dim("front", (108, 0, -6), (108, 0, -0.5), "v", "right", 1)
     s.center("front", (ta.XJ, 0, ta.ZJ), 18)
     s.axis_line("front", (-6, 0, 0), (20, 0, 0))
-    s.note("front", (87, 0, -0.5), "6x serration 3 wide x 1.6 deep, pitch 6", 6, 16)
+    s.note("front", (87, 0, -0.5), "6x serration 3 wide\nx 1.6 deep, pitch 6", 50, 40)
     s.dim("top", (0, -ta.SHELL_OUT, 0), (0, ta.SHELL_OUT, 0), "v", "left", 1)
     s.dim("top", (108, -ta.FINGER_HW, 0), (108, ta.FINGER_HW, 0), "v", "right", 1)
     feats = [
