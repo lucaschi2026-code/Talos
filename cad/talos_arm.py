@@ -47,6 +47,7 @@ PASSIVE_FACE = 17.7                # passive horn's outer face, from the servo m
 PAD_R = 9.5                        # idler plate pad that bears on the passive horn
 IDLER_CBORE = 0.8                  # passive-horn screw heads sit this deep in the idler plate
 Z_BED = -15.0                      # arm links print standing on this flat underside
+WRIST_TOP = 13.6                   # the wrist prints upside down on its flat top face
 FOREARM = dict(h0=28.0, h1=30.8, w_mid=32.0, h_mid=24.0)  # arm_link() sizes for the forearm
 
 POSES = {
@@ -441,11 +442,13 @@ def idler_tab_screws():
 
 
 def hub_cap(large=True):
-    """One snap-on cap in its own frame: inner face on y = 0, outer face at y = 3.4."""
-    r, recess, groove, boss = (12.5, 10.4, 9.0, 6.0) if large else (10.2, 3.4, 7.0, 4.5)
+    """One snap-on cap in its own frame: inner face on y = 0, outer face at y = 3.4.
+
+    The outer face is plain, so it prints face down on one solid first layer.
+    """
+    r, recess = (12.5, 10.4) if large else (10.2, 3.4)
     return (cyl_y(r, 0, 3.4).faces(">Y").edges().chamfer(0.8)
-            .cut(cyl_y(recess, -0.1, 1.8))                        # recess over the screw heads
-            .cut(cyl_y(groove, 3.0, 3.5)).union(cyl_y(boss, 1.8, 3.4)))  # ring groove on the face
+            .cut(cyl_y(recess, -0.1, 1.8)))                        # recess over the screw heads
 
 
 GAUGE_CLEAR = (0.3, 0.15)  # fit gauge windows: the pockets' clearance, and a tight one
@@ -511,9 +514,13 @@ CLIP_NEG_Y = ((1, 0, 0), (0, 0, -1), (0, 1, 0))  # clip on a -Y face, cable alon
 
 
 def octagon_flat(w, h, c, z_bed=Z_BED):
-    """Octagon with its top at h / 2 and its underside on z_bed."""
-    hh = h / 2 - z_bed
-    return [(y, z + h / 2 - hh / 2) for y, z in octagon(w, hh, c)]
+    """Beam profile: top at h / 2 with chamfered corners, flat square-cornered underside on z_bed.
+
+    The underside runs the full width, so on the bed it joins the clevis plate's
+    edge into one first layer.
+    """
+    a, t = w / 2, h / 2
+    return [(-a, z_bed), (a, z_bed), (a, t - c), (a - c, t), (-a + c, t), (-a, t - c)]
 
 
 def arm_link(L, h0=30.0, h1=30.8, w_mid=34.0, h_mid=25.0, spine=True, servo_entry_below=True):
@@ -535,6 +542,8 @@ def arm_link(L, h0=30.0, h1=30.8, w_mid=34.0, h_mid=25.0, spine=True, servo_entr
     shell = shell.union(cyl_y(18.0, -SHELL_OUT, SHELL_OUT, L, 0))
     body = clevis_plate().union(beam).union(shell)
     body = body.cut(box(-40, L + 40, -40, 40, -60, Z_BED))  # flat underside: hub and shell trimmed
+    # nose floor just past the servo: ties both shell walls together on the bed (stays inside R21)
+    body = body.union(box(L + 9.0, L + 13.5, -SHELL_OUT, SHELL_OUT, Z_BED, Z_BED + 4))  # servo entry cuts its back
     if spine:
         ridge = ruled_loft([(x, ridge_profile(h)) for x, _, h, _ in st])
         body = body.union(ridge.intersect(box(x0 + 8, x1 - 4, -10, 10, -40, 40)))
@@ -571,12 +580,16 @@ def octagon_xz(xa, xb, h):
 def wrist_parts():
     xs = X_ROLL - 18.7  # roll servo shaft origin
     servo_loc = loc_r(R_ROLL, (xs, 0, 0))
+    # Prints upside down on a flat top face at z = WRIST_TOP: the cradle top, the lugs and the
+    # output plate all reach it (hubs trimmed), so the output plate is built from the bed up.
+    top = WRIST_TOP
     # side lugs only: the cradle's back wall already spans the middle
-    bridge = box(20.5, 31, -CLV_OUT, CLV_OUT, -12, 12)
-    bridge = try_chamfer(bridge, "|Y", 3.0)
-    cradle = box(20.5, X_ROLL - 2.8, -15, 15, -38.5, 13.6)
+    bridge = box(20.5, 31, -CLV_OUT, CLV_OUT, -12, top)
+    cradle = box(20.5, X_ROLL - 2.8, -15, 15, -38.5, top)
     cradle = try_chamfer(cradle, "|X", 4.0)
-    body = clevis(reach=24, half_h=12).union(bridge).union(cradle)
+    body = clevis(reach=24, half_h=12).union(box(0, 24, CLV_IN, CLV_OUT, 0, top))
+    body = body.cut(horn_holes_y(CLV_IN - 1, CLV_OUT + 1))  # re-cut the horn holes the extension covered
+    body = body.union(bridge).union(cradle).cut(box(-40, 80, -40, 40, top, 40))
     body = body.union(cable_clip((46, -15.2, -30), CLIP_NEG_Y))
     body = body.cut(cyl_y(21.0, -CLV_IN, CLV_IN)).cut(box(-30, 0, -CLV_IN, CLV_IN, -30, 30))
     body = body.cut(pocket_in(servo_loc)).cut(box(xs - 16.0, 80, -12.7, 12.7, -36, 11))
@@ -656,7 +669,8 @@ PRINT_SETUP = {
     "TAL-102": ("-Z", "turntable down; no support"),
     "TAL-103": ("-Z", "flat underside down; no support (servo-opening roof and window tops bridge)"),
     "TAL-104": ("-Z", "flat underside down; no support (servo-opening roof and window tops bridge)"),
-    "TAL-105": ("-Z", "underside down as drawn; support only under the plug bay roof (servo-opening roof bridges)"),
+    "TAL-105": ("+Z", "upside down, flat top face down; support only under the idler plate's neck (5 mm up); "
+                      "the cradle floor and plug bay roof bridge"),
     "TAL-106": ("-X", "standing on the roll-horn disc; no support (one 32 mm bridge at the front of the "
                       "servo opening); use a brim, the part is 108 tall"),
     "TAL-107": ("+Y", "horn plate down; support under the finger"),

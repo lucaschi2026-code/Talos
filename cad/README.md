@@ -53,7 +53,7 @@ The parts are split into two sets so two people can model them at the same time.
 | Set | File | Parts | Steps |
 | --- | --- | --- | --- |
 | A | [`TAL-SET-A_base-to-upper-arm_rev-A.pdf`](drawings/work-sets/TAL-SET-A_base-to-upper-arm_rev-A.pdf) | TAL-101 base, TAL-102 shoulder, TAL-103 upper arm, TAL-108 hub cap, TAL-111 fit gauge | 43 |
-| B | [`TAL-SET-B_forearm-to-gripper_rev-A.pdf`](drawings/work-sets/TAL-SET-B_forearm-to-gripper_rev-A.pdf) | TAL-104 forearm, TAL-105 wrist, TAL-106 gripper body, TAL-107 moving jaw, TAL-110 idler plate | 42 |
+| B | [`TAL-SET-B_forearm-to-gripper_rev-A.pdf`](drawings/work-sets/TAL-SET-B_forearm-to-gripper_rev-A.pdf) | TAL-104 forearm, TAL-105 wrist, TAL-106 gripper body, TAL-107 moving jaw, TAL-110 idler plate | 44 |
 
 - **Shared sheets:** both sets start with TAL-000, TAL-001 and TAL-002. Each person models servo pocket P and the common features from those, so both sides of every joint use the same geometry.
 - **Where the sets meet:** only at the elbow. The upper arm's end shell (set A) holds the elbow servo, and the forearm's clevis (set B) clamps its horns. Both are defined on TAL-001 and TAL-002, so check them against each other before printing. The idler plate (TAL-110, set B) also screws onto the upper arm (set A): its pocket and screw holes are on TAL-103.
@@ -173,7 +173,7 @@ The design language is original rather than a copy of the SO-101 parts. It uses:
 - separate graphite hub caps
 - slim 20 mm serrated jaws, centred on the wrist roll axis
 
-The geometry is lightweighted where mass costs the most torque, in the gripper, wrist and forearm. The moving arm is 523 g, 70 % of it servos. See [`../calcs/README.md`](../calcs/README.md) for the numbers.
+The geometry is lightweighted where mass costs the most torque, in the gripper, wrist and forearm. The moving arm is 525 g, 70 % of it servos. See [`../calcs/README.md`](../calcs/README.md) for the numbers.
 
 ## Printing
 
@@ -183,20 +183,20 @@ Talos follows SO-101's printing rules:
 - **Supports:** on, but ignore slopes steeper than 45° and block them in horizontal screw holes. Drill those holes to size afterwards (3.2 mm for M3, 2.4 mm for M2 clearance). Bridges print unsupported.
 - **Fit gauge first:** TAL-111, as above.
 
-Each part's orientation was chosen by measuring its overhang in all six orientations:
+Each part's orientation was chosen by measuring its overhang in all six orientations. Every part sits flat on one solid first layer (one connected footprint, checked by slicing each part 0.2 mm above the bed):
 
-| Part | On the bed | Support |
-| --- | --- | --- |
-| TAL-101 Base | Plinth down | No support |
-| TAL-102 Shoulder | Turntable down | No support |
-| TAL-103 Upper arm | Flat underside down | No support (servo-opening roof and window tops bridge) |
-| TAL-104 Forearm | Flat underside down | No support (servo-opening roof and window tops bridge) |
-| TAL-105 Wrist | Underside down as drawn | Support only under the plug bay roof (servo-opening roof bridges) |
-| TAL-106 Gripper body | Standing on the roll-horn disc | No support (one 32 mm bridge at the front of the servo opening); use a brim, the part is 108 tall |
-| TAL-107 Moving jaw | Horn plate down | Support under the finger |
-| TAL-108 Hub cap ×3 | Outer face down | No support |
-| TAL-110 Idler plate ×2 | Outer face down | No support |
-| TAL-111 Servo fit gauge | Flat | No support. Print it first, with the same settings as the arm |
+| Part | On the bed | First layer | Support |
+| --- | --- | --- | --- |
+| TAL-101 Base | Plinth down | 15286 mm² | No support |
+| TAL-102 Shoulder | Turntable down | 3617 mm² | No support |
+| TAL-103 Upper arm | Flat underside down | 2637 mm² | No support (servo-opening roof and window tops bridge) |
+| TAL-104 Forearm | Flat underside down | 3273 mm² | No support (servo-opening roof and window tops bridge) |
+| TAL-105 Wrist | Upside down, flat top face down | 1245 mm² | Support only under the idler plate's neck (5 mm up); the cradle floor and plug bay roof bridge |
+| TAL-106 Gripper body | Standing on the roll-horn disc | 1031 mm² | No support (one 32 mm bridge at the front of the servo opening); use a brim, the part is 108 tall |
+| TAL-107 Moving jaw | Horn plate down | 884 mm² | Support under the finger |
+| TAL-108 Hub cap ×3 | Outer face down | 437 mm² | No support |
+| TAL-110 Idler plate ×2 | Outer face down | 589 mm² | No support |
+| TAL-111 Servo fit gauge | Flat | 1018 mm² | No support. Print it first, with the same settings as the arm |
 
 ## Regenerate
 

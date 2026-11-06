@@ -114,7 +114,7 @@ CHAIN = (0, (6, 1.5, 1, 1.5))               # centre / cutting-plane line patter
 
 # The parts are split into two work sets so two people can model them in parallel.
 # The reference sheets (TAL-0xx) go in both. The split is balanced on modelling steps
-# (A 43, B 42). The sets only meet at the elbow (upper arm shell -> forearm clevis), and
+# (A 43, B 44). The sets only meet at the elbow (upper arm shell -> forearm clevis), and
 # both sides of it are defined on the shared sheets (servo pocket P, clevis).
 WORK_SETS = {
     "A": ("base-to-upper-arm", "base, shoulder, upper arm, hub caps, fit gauge",
@@ -845,7 +845,7 @@ def print_note(part_no):
 
 def sheet_cap(large=True):
     cap = as_shape(ta.hub_cap(large))
-    r, recess, groove, boss = (12.5, 10.4, 9.0, 6.0) if large else (10.2, 3.4, 7.0, 4.5)
+    r, recess = (12.5, 10.4) if large else (10.2, 3.4)
     name, no, slug, side = (("Hub cap", "TAL-108", "hub-cap", "output side, covers 4 horn screws")
                             if large else
                             ("Hub cap, small", "TAL-109", "hub-cap-small", "idler side, covers 1 centre screw"))
@@ -858,18 +858,14 @@ def sheet_cap(large=True):
               parent="front", ends=((-r, 0, 0), (r, 0, 0)), margins=(30, 36, 30, 34))
     s.dim("A", (-r, 0, 0), (r, 0, 0), "h", "below", 2, prefix=DIA)
     s.dim("A", (-recess, 0, 0), (recess, 0, 0), "h", "below", 1, prefix=DIA)
-    s.dim("A", (-groove, 3.4, 0), (groove, 3.4, 0), "h", "above", 2, prefix=DIA)
-    s.dim("A", (-boss, 3.4, 0), (boss, 3.4, 0), "h", "above", 1, prefix=DIA)
     s.dim("A", (-recess, 0, 0), (-recess, 1.8, 0), "v", "left", 1)
     s.dim("A", (r - 0.8, 0, 0), (r - 0.8, 3.4, 0), "v", "right", 2)
-    s.dim("A", (groove, 3.0, 0), (groove, 3.4, 0), "v", "right", 1)
     s.callout("A", (r - 0.4, 3.0, 0), "0.8 × 45°", 26, 24)
     s.iso(cap, (160, 14, 268, 150), max_scale=4)
     feats = [
         f"* {name.upper()} ({side}):",
         f"Disc {DIA}{fmt(2 * r)}, 3.4 thick (y 0 to 3.4); chamfer 0.8 × 45° on the outer edge of the outer face.",
         f"Recess {DIA}{fmt(2 * recess)}, 1.8 deep from the inner face (clears M3 button heads, 1.65 high).",
-        f"Face groove: annulus {DIA}{fmt(2 * boss)} to {DIA}{fmt(2 * groove)}, 0.4 deep from the outer face.",
     ]
     s.features("FEATURES (in order)", feats)
     s.notes(GENERAL + ["Press-fit or glue onto the output-side clevis plate over the four horn screws.",
@@ -1420,6 +1416,8 @@ def sheet_arm(upper=True):
         f"({fmt(L - 34.2)}, 15.4) ({fmt(L - 38.2)}, 11.4), extruded y ±18.4; plus a cylinder R18 about Y "
         f"at x {fmt(L)}.",
         f"Flat underside: cut everything below z {fmt(zb)} (trims the clevis hub and the R18 cylinder).",
+        f"Nose floor: box x {fmt(L + 9)} to {fmt(L + 13.5)}, y ±18.4, z {fmt(zb)} to {fmt(zb + 4)}; ties the shell "
+        f"walls together on the bed (the servo entry cut later trims its back to x {fmt(L + 10.5)}).",
         f"Spine: ruled loft of the ridge profiles A, B, C, trimmed to x {fmt(x0 + 8)} to {fmt(x1 - 4)}.",
         "Windows: polygons W1 to W4 and W5 to W8 (mirrored in Z), cut through Y.",
         f"Cable clip (TAL-002) on the -Y flank at x {fmt(xm)}, cable along X.",
@@ -1461,7 +1459,8 @@ def sheet_arm(upper=True):
                                 (L + 3.3, -18.4, 0)], "above")
     s2.note("bottom", (L - 20, 8, -15), "SERVO ENTRY (FROM BELOW)", 30, 14)
     s2.features("PROFILES AND SECTION", [
-        f"* Profiles A, B, C: beam octagon (corners chamfered) with the spine ridge on top, in the YZ "
+        f"* Profiles A, B, C: beam section (top corners chamfered, underside flat and square-cornered) with "
+        f"the spine ridge on top, in the YZ "
         f"plane at the loft stations; cutting lines on sheet 1. Each sits on z {fmt(ta.Z_BED)} (flat "
         f"underside) with its top at the height given.",
         f"* Ridge: 8 wide, 4.8 across the top, 1.8 above the beam, 45° bevels; its base runs 3 into the beam.",
@@ -1485,11 +1484,10 @@ def sheet_wrist():
     s1.ordinate("front", "h", [(0, 0, -16), (20.5, 0, -38.5), (xs - 28.5, 0, -17.6), (xs - 15.5, 0, -17.6),
                                (xs - 8, 0, -12), (57, 0, -12), (xe, 0, -38.5)], "below")
     s1.ordinate("front", "v", [(20.5, 0, -38.5), (20.5, 0, -17.6), (20.5, 0, -12.4),
-                               (20.5, 0, -12), (20.5, 0, 12), (20.5, 0, 13.6)], "left")
+                               (20.5, 0, -12), (20.5, 0, 13.6)], "left")
     s1.callout("front", (53, 0, -8), f"HEX WINDOW H({fmt(xs - 8)}, 57, -12, 8)\nTHRU (TAL-002)", 24, 56)
     s1.callout("top", (47, -19, 0), "CABLE CLIP (TAL-002)\nAT X 46, Z -30, ALONG X", 20, -8)
     s1.callout("front", (xs - 22, 0, -15), "PLUG BAY EXIT Y -30 TO 0\nSTEP Z -10.6, Y -18.6", -10, -56)
-    s1.callout("front", (20.5 + 1.5, 0, 12 - 1.5), "C3 (LUGS, EDGES ∥ Y)", -14, 16)
     s1.callout("front", s1.on_circle("front", (0, 0, 0), 16, 250), "CLEVIS (TAL-002)\nR = 24, H = 12", -2, -14)
     s1.ordinate("top", "v", [(-16, -ta.CLV_OUT, 0), (-16, ta.CLV_OUT, 0), (xe, -15, 0), (xe, 15, 0)], "left")
     s1.ordinate("top", "h", [(31, ta.CLV_OUT, 0)], "above")
@@ -1499,9 +1497,12 @@ def sheet_wrist():
     s1.note("right", (xe, 0, -20), "INTERIOR OPEN TO +X", 26, -36)
     s1.cut_line("top", ((-20, 0, 0), (xe + 4, 0, 0)), np.array([0, 1, 0]), "A")
     s1.features("FEATURES (in order)", [
-        "Clevis (TAL-002), R = 24, H = 12.",
-        "Bridge lugs: box x 20.5 to 31, y ±22.9, z ±12; C3 on the edges parallel to Y.",
+        "Clevis (TAL-002), R = 24, H = 12; the output plate's rectangle extended up to z 13.6, with the horn "
+        "holes cut through it.",
+        "Bridge lugs: box x 20.5 to 31, y ±22.9, z -12 to 13.6.",
         f"Cradle: box x 20.5 to {fmt(xe)}, y ±15, z -38.5 to 13.6; C4 on the edges parallel to X.",
+        "Flat top: cut everything above z 13.6 (trims the clevis hubs), so the wrist prints upside down "
+        "on one face.",
         "Cable clip (TAL-002) on the -Y face: centre (46, -15.2, -30), cable along X.",
         "Clevis gap cut (TAL-002).",
         pocket_note((xs, 0, 0), "+X", "+Z (body hangs down)", "-Y"),

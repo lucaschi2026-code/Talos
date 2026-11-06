@@ -12,14 +12,14 @@ Four scripts check the arm:
 
 | Check | Result | Status |
 | --- | --- | --- |
-| Moving mass | 523 g above the base, 738 g total | |
+| Moving mass | 525 g above the base, 741 g total | |
 | Shoulder holding, arm straight, 200 g | 1.73 N·m = 59 % of stall, 1.8× the 1/3 limit | ❌ over (first calc: 1.62) |
 | Elbow holding, arm straight, 200 g | 1.06 N·m, 1.08× the limit | ⚠️ just over (first calc: 0.96) |
 | Wrist flex / roll | 0.43 / 0.004 N·m | ✅ |
 | 200 g payload, top-down picks | OK out to 195 mm from the base axis | ✅ typical work zone |
 | Dynamics, shoulder 90° in 1 s | +0.37 N·m peak, 72 % of stall total | ✅ transient |
 | Pan servo shaft | 1.73 N·m overturning moment (SO-101: 1.87 reaching forward), carried by the servo's own bearing | ✅ within SO-101's own load; measure play (see below) |
-| Base tipping | Tips over at full reach (1.12 N·m net) unless fixed down | ❌ clamp or bolt it |
+| Base tipping | Tips over at full reach (1.13 N·m net) unless fixed down | ❌ clamp or bolt it |
 | Beam bending | Worst 6.2 MPa (upper arm at x 112, the elbow housing with its floor open for the servo), safety factor 1.6. Forearm: 2.7 MPa at its own housing (SF 3.8) | ⚠️ lowest margin on the arm, see below |
 | Tip sag from link bending | 2.3 mm | ✅ |
 | Horn screw bearing | M3: 5.3 MPa holding, 8.8 MPa at stall (SF 2.3) | ✅ |
@@ -50,6 +50,8 @@ Opening the upper arm's housing floor so the elbow servo can be pushed in from b
 
 The SO-101-style revision fixed the idler side of every clevis: the idler plates now screw into the servo's passive horn (4× M3, like the output side) instead of one screw into the idler boss, which doesn't turn. The small hub caps went, since a cap wide enough for those screws would hit the parent servo's plugs. Moving mass 523 g; torques, joint ranges and beam stresses unchanged.
 
+The flat-first-layer revision made every part sit on one solid footprint: the arm links' beams got square bottom corners and a short floor under the nose, the wrist got a flat top face to print upside down on, and the hub cap lost its face groove. Moving mass 525 g (+2 g); torques, joint ranges and beam stresses unchanged.
+
 The base was left alone on purpose. It's fixed, so it adds no joint torque, and its weight works against tipping.
 
 The gains are modest because 69 % of the moving mass is servos (6 × 61 g). The printed parts are already mostly 20 % infill, so their weight is in the outer skin. Cutting more plastic would cost stiffness for little torque.
@@ -67,7 +69,7 @@ SO-101 numbers come from its own URDF via [`so101_compare.py`](so101_compare.py)
 | Shoulder axis offset from pan axis | 30.4 mm forward | 0 (centred) |
 | Tool point from shoulder axis | 410 mm | 402 mm (420 to the jaw tip) |
 | Tool point from pan axis, reaching forward | 441 mm | 402 mm |
-| Moving mass | 485 g | 523 g (493 g without the 30 g screws and cable allowance the URDF leaves out) |
+| Moving mass | 485 g | 525 g (495 g without the 30 g screws and cable allowance the URDF leaves out) |
 | Shoulder, straight out, 200 g | 1.67 N·m | 1.73 N·m |
 | Elbow, straight out, 200 g | 1.03 N·m | 1.06 N·m |
 | Wrist flex, straight out, 200 g | 0.43 N·m | 0.43 N·m |
@@ -85,7 +87,7 @@ Both arms put the shoulder over the 1/3-stall line with 200 g straight out. So t
 
 ### What changed from the first calc
 
-`torque_check.m` used SO-101 numbers: L1 = 120, L2 = 120, wrist to tip 160 mm, 385 g of moving links. The CAD is 116 / 135 / 169 mm, and the links weigh 423 g once modelled. The longer forearm and the extra mass raise the shoulder load by about 8 % and push the elbow just past the limit.
+`torque_check.m` used SO-101 numbers: L1 = 120, L2 = 120, wrist to tip 160 mm, 385 g of moving links. The CAD is 116 / 135 / 169 mm, and the links weigh 426 g once modelled. The longer forearm and the extra mass raise the shoulder load by about 8 % and push the elbow just past the limit.
 
 Shortening the forearm barely helps. At 115 mm the elbow just drops under the limit (0.99×; section 10 of the results), but that costs 20 mm of reach. The 135 mm forearm stays, since it matches SO-101 reach.
 
@@ -151,9 +153,9 @@ With the CAD inputs, the formula gives **1.77 N·m at the shoulder (60 % of stal
 | --- | --- |
 | Pan shaft moment, Talos | 0.94 N·m unloaded, 1.77 N·m with 200 g at the tip |
 | Pan shaft moment, SO-101 (URDF, reaching forward) | 1.01 N·m unloaded, 1.87 N·m with 200 g at its tool point |
-| Talos / SO-101 | 0.93× unloaded, 0.94× loaded |
+| Talos / SO-101 | 0.94× unloaded, 0.95× loaded |
 | Axial load on the pan servo | 7.1 N |
-| Whole-arm CoM | 188 mm from the base axis; the front edge is 64 mm out |
+| Whole-arm CoM | 187 mm from the base axis; the front edge is 64 mm out |
 | Tipping | Tips at 1.15 N·m net, so it needs 5.7 N per rear M4 bolt |
 | Rim lift → tip error | ×11.4: 0.05 mm → 0.57 mm, 0.1 → 1.14, 0.2 → 2.27, 0.3 → 3.41 |
 
