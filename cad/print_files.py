@@ -1,0 +1,87 @@
+"""Print-ready files: every printed part turned onto its print face, one 3MF per part.
+
+Orientation and support notes come from PRINT_SETUP in talos_arm.py, so the files,
+the drawings and the README agree. 3MF carries millimetres, so parts import at the
+right size. The mesh is welded into one closed surface (no open edges, which some
+slicers flag), with a chord tolerance of 0.01 mm so the M3 and M2 holes stay round.
+
+    python print_files.py      # writes print/<part no>_<name>_rev-A.3mf
+"""
+
+import zipfile
+from pathlib import Path
+
+import numpy as np
+
+import talos_arm as ta
+
+REV = "A"
+OUT = Path(__file__).with_name("print")
+
+CONTENT_TYPES = """<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>
+</Types>"""
+RELS = """<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
+</Relationships>"""
+
+
+def welded_mesh(solid, tol=0.01, ang=0.2):
+    """Triangles of the solid with shared vertices, outward-facing."""
+    verts, tris = solid.tessellate(tol, ang)
+    V = np.array([(v.x, v.y, v.z) for v in verts])
+    T = np.array(tris)
+    key = np.round(V / 1e-5).astype(np.int64)
+    _, first, inverse = np.unique(key, axis=0, return_index=True, return_inverse=True)
+    V, T = V[first], inverse.reshape(-1)[T]
+    T = T[(T[:, 0] != T[:, 1]) & (T[:, 1] != T[:, 2]) & (T[:, 0] != T[:, 2])]
+    return V, T
+
+
+def check(V, T):
+    """(volume, open edges, non-manifold edges)."""
+    a, b, c = V[T[:, 0]], V[T[:, 1]], V[T[:, 2]]
+    vol = np.einsum("ij,ij->i", a, np.cross(b, c)).sum() / 6
+    e = np.sort(np.vstack([T[:, [0, 1]], T[:, [1, 2]], T[:, [2, 0]]]), axis=1)
+    _, cnt = np.unique(e, axis=0, return_counts=True)
+    return vol, int((cnt == 1).sum()), int((cnt > 2).sum())
+
+
+def write_3mf(path, name, V, T):
+    verts = "\n".join(f'<vertex x="{x:.4f}" y="{y:.4f}" z="{z:.4f}"/>' for x, y, z in V)
+    tris = "\n".join(f'<triangle v1="{a}" v2="{b}" v3="{c}"/>' for a, b, c in T)
+    model = (f'<?xml version="1.0" encoding="UTF-8"?>\n'
+             f'<model unit="millimeter" xml:lang="en-US" '
+             f'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">\n'
+             f'<metadata name="Title">{name}</metadata>\n'
+             f'<resources><object id="1" type="model" name="{name}"><mesh>\n'
+             f'<vertices>\n{verts}\n</vertices>\n<triangles>\n{tris}\n</triangles>\n'
+             f'</mesh></object></resources>\n<build><item objectid="1"/></build>\n</model>\n')
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", CONTENT_TYPES)
+        z.writestr("_rels/.rels", RELS)
+        z.writestr("3D/3dmodel.model", model)
+
+
+def main():
+    OUT.mkdir(exist_ok=True)
+    for f in OUT.glob("*.3mf"):
+        f.unlink()
+    for part_no, (slug, qty, solid) in ta.printed_parts().items():
+        down, note = ta.PRINT_SETUP[part_no]
+        s = ta.on_bed(solid, down)
+        V, T = welded_mesh(s)
+        vol, open_edges, nonmanifold = check(V, T)
+        path = OUT / f"{part_no}_{slug}_rev-{REV}.3mf"
+        write_3mf(path, f"{part_no} {slug}", V, T)
+        bb = s.BoundingBox()
+        print(f"{path.name}: x{qty}, {bb.xlen:.0f} x {bb.ylen:.0f} x {bb.zlen:.0f} mm, "
+              f"{len(T)} triangles, mesh {vol:.0f} / solid {s.Volume():.0f} mm3, "
+              f"{open_edges} open + {nonmanifold} non-manifold edges; {note}")
+
+
+if __name__ == "__main__":
+    main()

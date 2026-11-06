@@ -10,13 +10,13 @@ Printed parts: PLA 1.24 g/cm3, 1.2 mm perimeters/skins, 20% infill. Servos: 55 g
 | --- | --- | --- | --- |
 | base (fixed) | 155 | 61 | 216 |
 | shoulder_link | 39 | 61 | 100 |
-| upper_arm_link | 53 | 61 | 114 |
-| forearm_link | 58 | 61 | 119 |
-| wrist_link | 32 | 61 | 93 |
+| upper_arm_link | 52 | 61 | 113 |
+| forearm_link | 57 | 61 | 118 |
+| wrist_link | 31 | 61 | 92 |
 | gripper_link | 40 | 61 | 101 |
-| **total** | | | **741** |
+| **total** | | | **738** |
 
-Moving mass above the base: 526 g.
+Moving mass above the base: 523 g.
 
 ## 1. Static holding torque, arm straight out (worst case)
 
@@ -31,7 +31,7 @@ Limit: 0.98 N*m continuous (1/3 of 2.94 N*m stall). Payload 200 g at mid-jaw (15
 
 Payload held at the very tip instead: shoulder 1.77 N*m.
 
-The payload is 0.79 N*m of the shoulder load (45 %).
+The payload is 0.79 N*m of the shoulder load (46 %).
 
 ### Against the earlier `torque_check.m` model
 
@@ -40,16 +40,16 @@ The payload is 0.79 N*m of the shoulder load (45 %).
 | Upper arm L1 | 120 mm | 116 mm |
 | Forearm L2 | 120 mm | 135 mm |
 | Wrist flex -> tip | 160 mm | 169 mm |
-| Moving links (4) | 385 g | 426 g |
+| Moving links (4) | 385 g | 423 g |
 | Shoulder, 200 g payload | 1.62 N*m | 1.73 N*m |
 | Elbow, 200 g payload | 0.96 N*m | 1.06 N*m |
 
 Lumped inputs to paste into `torque_check.m` (per-link mass incl. servo, CoM distance from the link's own joint, arm straight):
 
 ```
-upper arm + elbow servo      m = 0.114 kg, CoM   80.5 mm from shoulder axis
-forearm + wrist-flex servo   m = 0.119 kg, CoM   93.4 mm from elbow axis
-wrist + wrist-roll servo     m = 0.093 kg, CoM   37.6 mm from wrist_flex axis
+upper arm + elbow servo      m = 0.113 kg, CoM   81.2 mm from shoulder axis
+forearm + wrist-flex servo   m = 0.118 kg, CoM   94.2 mm from elbow axis
+wrist + wrist-roll servo     m = 0.092 kg, CoM   38.2 mm from wrist_flex axis
 gripper + jaw servo          m = 0.101 kg, CoM  101.7 mm from wrist_flex axis
 ```
 
@@ -85,9 +85,9 @@ Triangular velocity profile (accelerate half way, decelerate half way): alpha = 
 
 | Joint | Move | Inertia (kg*m^2) | alpha (rad/s^2) | omega peak (rpm) | Accel torque (N*m) | Static + accel (N*m) | % stall |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| pan | 180 deg in 1.5 s | 0.0590 | 5.6 | 40 | 0.330 | 0.33 | 11 % |
-| shoulder | 90 deg in 1.0 s | 0.0590 | 6.3 | 30 | 0.371 | 2.10 | 72 % |
-| elbow | 90 deg in 0.8 s | 0.0261 | 9.8 | 38 | 0.257 | 1.32 | 45 % |
+| pan | 180 deg in 1.5 s | 0.0590 | 5.6 | 40 | 0.329 | 0.33 | 11 % |
+| shoulder | 90 deg in 1.0 s | 0.0589 | 6.3 | 30 | 0.370 | 2.10 | 71 % |
+| elbow | 90 deg in 0.8 s | 0.0261 | 9.8 | 38 | 0.256 | 1.32 | 45 % |
 
 Peak speeds are well under the servo's no-load speed (about 0.22 s/60 deg, 45 rpm at 12 V; check the datasheet for your variant). Short peaks above the 1/3 line are fine; the limit is for sustained holding.
 
@@ -116,7 +116,7 @@ All joint torque goes through the output horn's 4 screws (the idler side only su
 | Joint | Peak torque (N*m) | Force per screw (N) | Bearing stress (MPa) | Safety factor |
 | --- | --- | --- | --- | --- |
 | shoulder (servo stall) | 2.94 | 106 | 8.8 | 2.3 |
-| shoulder (holding, 200 g) | 1.73 | 63 | 5.2 | 3.8 |
+| shoulder (holding, 200 g) | 1.73 | 62 | 5.2 | 3.8 |
 
 Plate thickness 4.0 mm, M3 screws on a 14 mm circle, allowable 20 MPa.
 
@@ -124,8 +124,8 @@ The idler plates on the upper arm and forearm are a separate part (TAL-110), hel
 
 | Idler plate | Joint reaction x2 (N) | Force per screw (N) | Bearing stress (MPa) | Safety factor |
 | --- | --- | --- | --- | --- |
-| upper_arm_link (shoulder) | 12.3 | 6.1 | 0.51 | 39 |
-| forearm_link (elbow) | 10.1 | 5.0 | 0.42 | 48 |
+| upper_arm_link (shoulder) | 12.2 | 6.1 | 0.51 | 39 |
+| forearm_link (elbow) | 10.0 | 5.0 | 0.42 | 48 |
 
 ## 8. Gripper
 
@@ -152,7 +152,7 @@ CAD rebuilt with a different elbow-to-wrist length; everything else unchanged. A
 
 | Forearm L2 (mm) | Reach, shoulder to tip (mm) | Shoulder (N*m) | Elbow (N*m) | Elbow vs limit |
 | --- | --- | --- | --- | --- |
-| 115 | 400 | 1.63 | 0.96 | 0.98x |
+| 115 | 400 | 1.62 | 0.96 | 0.98x |
 | 120 | 405 | 1.65 | 0.99 | 1.01x |
 | 125 | 410 | 1.68 | 1.01 | 1.03x |
 | 135 (design) | 420 | 1.73 | 1.06 | 1.08x |

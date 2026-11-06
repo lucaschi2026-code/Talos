@@ -43,6 +43,9 @@ XJ, ZJ = 42.0, 6.0  # jaw pivot in the gripper frame
 SHELL_IN, SHELL_OUT = 16.2, 18.4   # shell walls beside the servo caps
 CLV_IN, CLV_OUT = 18.9, 22.9       # clevis plates on the next link's horns
 IDLER_HUB_R = 10.5                 # idler-side plate hub: just over the passive horn, inside the plugs
+PASSIVE_FACE = 17.7                # passive horn's outer face, from the servo mid-plane
+PAD_R = 9.5                        # idler plate pad that bears on the passive horn
+IDLER_CBORE = 0.8                  # passive-horn screw heads sit this deep in the idler plate
 Z_BED = -15.0                      # arm links print standing on this flat underside
 FOREARM = dict(h0=28.0, h1=30.8, w_mid=32.0, h_mid=24.0)  # arm_link() sizes for the forearm
 
@@ -176,7 +179,9 @@ def sts3215():
     for x, y in HORN_HOLES:
         horn = horn.cut(cyl_z(1.25, 16, 19, x, y))
     horn = horn.cut(cyl_z(1.6, 16, 19))
-    idler = cyl_z(10.0, -17.7, -15.9).cut(cyl_z(3.5, -18, -15))  # passive horn
+    idler = cyl_z(10.0, -PASSIVE_FACE, -15.9).cut(cyl_z(3.5, -18, -15))  # passive horn, turns on the boss
+    for x, y in HORN_HOLES:
+        idler = idler.cut(cyl_z(1.25, -18, -15, x, y))
     plugs = compound([box(CONN_X[0] - 0.3, CONN_X[1] + 0.3, y0 - 0.2, y1 + 0.2, -26.0, -17.4)
                       for y0, y1 in CONN_Y])
     return body, horn.union(idler), plugs
@@ -406,8 +411,13 @@ def idler_plate(reach=30.0, half_h=15.0, tab=False):
     idl = (cq.Workplane("XZ").circle(IDLER_HUB_R).extrude(-t)
            .union(prism_xz(idler_neck(reach, half_h), 0, t))
            .translate((0, -CLV_OUT, 0)))
-    idl = idl.union(cyl_y(5, -CLV_IN, -18.35))           # pad onto the idler boss
-    idl = idl.cut(cyl_y(SCREW[3]["clear"] + 0.1, -CLV_OUT - 1, -18))
+    # Like the output side, the plate is screwed to the passive horn, which turns on the
+    # servo's idler boss; nothing is screwed into the boss itself. A pad reaches the horn face.
+    idl = idl.union(cyl_y(PAD_R, -CLV_IN, -PASSIVE_FACE))
+    idl = idl.cut(cyl_y(3.5, -CLV_OUT - 1, -PASSIVE_FACE + 1))       # centre: clears the boss
+    for x, z in HORN_HOLES:
+        idl = idl.cut(cyl_y(SCREW[3]["clear"], -CLV_OUT - 1, -PASSIVE_FACE + 1, x, z))
+        idl = idl.cut(cyl_y(SCREW[3]["cbore"], -CLV_OUT - 1, -CLV_OUT + IDLER_CBORE, x, z))
     if tab:
         for x, z in IDLER_TAB_SCREWS:
             idl = idl.cut(cyl_y(SCREW[3]["clear"] + 0.1, -CLV_OUT - 1, -CLV_IN + 1, x, z))
@@ -420,8 +430,9 @@ def clevis(hub_r=16.0, reach=30.0, half_h=15.0):
 
 
 def clevis_screws():
-    """Four M3 x 6 into the output horn, one M3 x 8 into the idler boss."""
-    return horn_screws_y(CLV_OUT) + [screw(3, 8, (0, -CLV_OUT, 0), "+y")]
+    """Four M3 x 6 into the output horn and four M3 x 6 into the passive horn."""
+    passive = [screw(3, 6, (x, -CLV_OUT + IDLER_CBORE, z), "+y") for x, z in HORN_HOLES]
+    return horn_screws_y(CLV_OUT) + passive
 
 
 def idler_tab_screws():
@@ -437,10 +448,48 @@ def hub_cap(large=True):
             .cut(cyl_y(groove, 3.0, 3.5)).union(cyl_y(boss, 1.8, 3.4)))  # ring groove on the face
 
 
+GAUGE_CLEAR = (0.3, 0.15)  # fit gauge windows: the pockets' clearance, and a tight one
+
+
+def gauge_window(c):
+    """Rectangles (x0, x1, y0, y1) of the fit-gauge window at clearance c, in the servo's
+    X (length) and Z (thickness) directions with the servo frame origin at (0, 0): the body
+    and caps, plus notches for the back pad, connector headers and idler boss."""
+    return [(-35.2 - c, 10.2 + c, -15.9 - c, 15.9 + c),
+            (-29.9 - c, -19.9 + c, -17.7 - c, 0.0),
+            (CONN_X[0] - c, CONN_X[1] + c, -17.4 - c, 0.0),
+            (-3.0 - c, 3.0 + c, -18.3 - c, 0.0)]
+
+
+def fit_gauge(h=8.0, wall=3.0):
+    """Servo fit gauge (TAL-111), printed flat. Returns (solid, window origins).
+
+    Each window is the profile the servo presents when it is pushed into a pocket
+    sideways (along its width), as it is in every Talos part: at the pockets'
+    clearance (one notch) and tight (two notches). Print it before the arm, with
+    the same settings. The bare servo should push through the one-notch window by
+    hand and not through the two-notch one.
+    """
+    out, origins, y_at = None, [], 0.0
+    for k, c in enumerate(GAUGE_CLEAR):
+        ylo, yhi = -18.3 - c, 15.9 + c
+        ox, oy = 35.2 + c + wall, y_at + wall - ylo
+        frame = box(0, 45.4 + 2 * c + 2 * wall, y_at, y_at + (yhi - ylo) + 2 * wall, 0, h)
+        for x0, x1, y0, y1 in gauge_window(c):
+            frame = frame.cut(box(x0 + ox, x1 + ox, y0 + oy, y1 + oy, -1, h + 1))
+        for n in range(k + 1):  # notches on the end wall's top edge: 1 = clearance, 2 = tight
+            ny = y_at + wall + 6 + 4 * n
+            frame = frame.cut(box(-1, 1.2, ny, ny + 1.5, h - 1.5, h + 1))
+        out = frame if out is None else out.union(frame)
+        origins.append((ox, oy))
+        y_at += (yhi - ylo) + wall
+    return out, origins
+
+
 def hub_caps():
-    """Caps over the clevis screws: large on the horn side, small on the idler side."""
-    return (hub_cap(True).translate((0, CLV_OUT, 0))
-            .union(hub_cap(False).mirror("XZ").translate((0, -CLV_OUT, 0))))
+    """Cap over the output-horn screws. The idler side has none: a cap wide enough for the
+    passive-horn screws would hit the parent servo's plugs."""
+    return hub_cap(True).translate((0, CLV_OUT, 0))
 
 
 def ruled_loft(stations):
@@ -594,6 +643,54 @@ def moving_jaw():
         x = 30 + 6 * k
         body = body.cut(prism_xz([(x, -5.5), (x + 1.5, -3.9), (x + 3, -5.5)], -13, 24))
     return body.cut(horn_holes_y(CLV_IN - 1, CLV_OUT + 1))
+
+
+# ---------------------------------------------------------------- printing
+
+# How each printed part sits on the bed: the face that goes down (in the part's own
+# frame) and what, if anything, needs support. Chosen by measuring the overhang in all
+# six orientations. Slicer: support on, but not for slopes steeper than 45 degrees and
+# never inside horizontal screw holes (drill those to size); bridges print unsupported.
+PRINT_SETUP = {
+    "TAL-101": ("-Z", "plinth down; no support"),
+    "TAL-102": ("-Z", "turntable down; no support"),
+    "TAL-103": ("-Z", "flat underside down; no support (servo-opening roof and window tops bridge)"),
+    "TAL-104": ("-Z", "flat underside down; no support (servo-opening roof and window tops bridge)"),
+    "TAL-105": ("-Z", "underside down as drawn; support only under the plug bay roof (servo-opening roof bridges)"),
+    "TAL-106": ("-X", "standing on the roll-horn disc; no support (one 32 mm bridge at the front of the "
+                      "servo opening); use a brim, the part is 108 tall"),
+    "TAL-107": ("+Y", "horn plate down; support under the finger"),
+    "TAL-108": ("+Y", "outer face down; no support"),
+    "TAL-110": ("-Y", "outer face down; no support"),
+    "TAL-111": ("-Z", "flat; no support. Print it first, with the same settings as the arm"),
+}
+
+
+def printed_parts():
+    """Every printed part in its own frame: {part no: (slug, quantity, solid)}."""
+    base, _ = base_parts()
+    shoulder, _ = shoulder_parts()
+    wrist, _ = wrist_parts()
+    grip, _ = gripper_parts()
+    upper, _, _, idler = arm_link(L1)
+    fore, _, _, _ = arm_link(L2, **FOREARM)
+    return {"TAL-101": ("base", 1, base["base"]), "TAL-102": ("shoulder", 1, shoulder["shoulder"]),
+            "TAL-103": ("upper-arm", 1, upper), "TAL-104": ("forearm", 1, fore),
+            "TAL-105": ("wrist", 1, wrist["wrist"]), "TAL-106": ("gripper-body", 1, grip["gripper"]),
+            "TAL-107": ("moving-jaw", 1, moving_jaw()), "TAL-108": ("hub-cap", 3, hub_cap(True)),
+            "TAL-110": ("idler-plate", 2, idler), "TAL-111": ("servo-fit-gauge", 1, fit_gauge()[0])}
+
+
+def on_bed(solid, down):
+    """Turn a part so its `down` face ("-Z", "+Y", ...) sits on z = 0, centred on the origin."""
+    rot_for = {"-Z": None, "+Z": ((1, 0, 0), 180), "+Y": ((1, 0, 0), -90), "-Y": ((1, 0, 0), 90),
+               "-X": ((0, 1, 0), -90), "+X": ((0, 1, 0), 90)}
+    s = solid.val() if isinstance(solid, cq.Workplane) else solid
+    if rot_for[down]:
+        axis, deg = rot_for[down]
+        s = s.rotate(cq.Vector(0, 0, 0), cq.Vector(*axis), deg)
+    bb = s.BoundingBox()
+    return s.translate(cq.Vector(-(bb.xmin + bb.xmax) / 2, -(bb.ymin + bb.ymax) / 2, -bb.zmin))
 
 
 # ---------------------------------------------------------------- assembly

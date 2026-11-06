@@ -14,8 +14,8 @@ g = 9.81;  % gravity, m/s^2
 names  = ["base (fixed)", "shoulder link", "upper arm + elbow servo", ...
           "forearm + wrist-flex servo", "wrist + wrist-roll servo", ...
           "gripper + jaw servo", "payload"];
-m      = [0.2255, 0.0998, 0.1137, 0.1191, 0.0927, 0.1006, 0.200];
-x      = [-0.0090, 0.0000, 0.0805, 0.2094, 0.2886, 0.3527, 0.420];  % payload at the tip
+m      = [0.2255, 0.0998, 0.1127, 0.1181, 0.0915, 0.1006, 0.200];
+x      = [-0.0090, 0.0000, 0.0812, 0.2102, 0.2892, 0.3527, 0.420];  % payload at the tip
 moving = 2:7;  % everything the pan servo carries
 arm    = 2:6;  % same, without the payload
 
@@ -26,8 +26,8 @@ arm    = 2:6;  % same, without the payload
 so_m = [0.100, 0.103, 0.104, 0.079, 0.087, 0.012, 0.200];
 so_x = [0.0308, 0.1194, 0.2445, 0.3200, 0.3676, 0.3953, 0.4408];
 
-%% Check: the CAD moving mass should match design_check.py (526 g)
-assert(abs(sum(m(arm)) - 0.526) < 0.002, 'Moving mass does not match the CAD')
+%% Check: the CAD moving mass should match design_check.py (523 g)
+assert(abs(sum(m(arm)) - 0.523) < 0.002, 'Moving mass does not match the CAD')
 
 %% 1. Overturning moment on the pan servo's output shaft
 M_pan   = g * sum(m(moving) .* x(moving));
