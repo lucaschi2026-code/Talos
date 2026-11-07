@@ -9,14 +9,14 @@ Printed parts: PLA 1.24 g/cm3, 1.2 mm perimeters/skins, 20% infill. Servos: 55 g
 | Link | Printed (g) | Servo (g) | Total (g) |
 | --- | --- | --- | --- |
 | base (fixed) | 155 | 61 | 216 |
-| shoulder_link | 39 | 61 | 100 |
+| shoulder_link | 37 | 61 | 98 |
 | upper_arm_link | 53 | 61 | 114 |
 | forearm_link | 58 | 61 | 119 |
 | wrist_link | 31 | 61 | 92 |
 | gripper_link | 40 | 61 | 101 |
-| **total** | | | **741** |
+| **total** | | | **739** |
 
-Moving mass above the base: 525 g.
+Moving mass above the base: 524 g.
 
 ## 1. Static holding torque, arm straight out (worst case)
 
@@ -48,9 +48,9 @@ Lumped inputs to paste into `torque_check.m` (per-link mass incl. servo, CoM dis
 
 ```
 upper arm + elbow servo      m = 0.114 kg, CoM   81.0 mm from shoulder axis
-forearm + wrist-flex servo   m = 0.119 kg, CoM   93.8 mm from elbow axis
-wrist + wrist-roll servo     m = 0.092 kg, CoM   38.2 mm from wrist_flex axis
-gripper + jaw servo          m = 0.101 kg, CoM  101.7 mm from wrist_flex axis
+forearm + wrist-flex servo   m = 0.119 kg, CoM   93.9 mm from elbow axis
+wrist + wrist-roll servo     m = 0.092 kg, CoM   38.1 mm from wrist_flex axis
+gripper + jaw servo          m = 0.101 kg, CoM  101.6 mm from wrist_flex axis
 ```
 
 ![Shoulder torque vs elevation](shoulder_torque_cad.png)
@@ -85,8 +85,8 @@ Triangular velocity profile (accelerate half way, decelerate half way): alpha = 
 
 | Joint | Move | Inertia (kg*m^2) | alpha (rad/s^2) | omega peak (rpm) | Accel torque (N*m) | Static + accel (N*m) | % stall |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| pan | 180 deg in 1.5 s | 0.0590 | 5.6 | 40 | 0.330 | 0.33 | 11 % |
-| shoulder | 90 deg in 1.0 s | 0.0590 | 6.3 | 30 | 0.371 | 2.10 | 72 % |
+| pan | 180 deg in 1.5 s | 0.0591 | 5.6 | 40 | 0.330 | 0.33 | 11 % |
+| shoulder | 90 deg in 1.0 s | 0.0590 | 6.3 | 30 | 0.371 | 2.11 | 72 % |
 | elbow | 90 deg in 0.8 s | 0.0261 | 9.8 | 38 | 0.257 | 1.32 | 45 % |
 
 Peak speeds are well under the servo's no-load speed (about 0.22 s/60 deg, 45 rpm at 12 V; check the datasheet for your variant). Short peaks above the 1/3 line are fine; the limit is for sustained holding.
@@ -104,8 +104,8 @@ Arm straight out with 200 g. Sections are cut from the CAD every 2 mm; the core 
 
 | Link | Worst station (mm from joint) | Moment (N*m) | I_eff (mm^4) | Stress (MPa) | Safety factor | Tip deflection (mm) |
 | --- | --- | --- | --- | --- | --- | --- |
-| upper_arm_link | 112 | 1.08 | 4959 | 6.2 | 1.6 | 1.63 |
-| forearm_link | 132 | 0.44 | 4772 | 2.7 | 3.8 | 0.65 |
+| upper_arm_link | 112 | 1.08 | 4959 | 6.2 | 1.6 | 1.61 |
+| forearm_link | 132 | 0.44 | 4772 | 2.7 | 3.8 | 0.64 |
 
 Tip sag from bending of the two printed links: about 2.3 mm.
 

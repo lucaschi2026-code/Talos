@@ -17,7 +17,8 @@ Parametric CadQuery model of the Talos 5-axis arm plus gripper, exported as a fu
 | `drawings/sheets/`, `drawings/previews/` | One PDF per part (all its sheets), plus a PNG preview of every sheet |
 | `drawings.py` | Generates the drawing set from `talos_arm.py`, so the drawings always match the model |
 | `print/` | Print-ready 3MF of every printed part, already turned onto its print face: see [Printing](#printing) |
-| `print_files.py` | Writes `print/` from `talos_arm.py` |
+| `print_files.py` | Writes `print/` from `talos_arm.py`, after `part_checks.py` passes for each part |
+| `part_checks.py` | Measures every part's print mesh against the design dimensions, and checks the servo and idler plate fits: see [Dimension checks](#dimension-checks) |
 
 ## Drawings
 
@@ -52,8 +53,8 @@ The parts are split into two sets so two people can model them at the same time.
 
 | Set | File | Parts | Steps |
 | --- | --- | --- | --- |
-| A | [`TAL-SET-A_base-to-upper-arm_rev-A.pdf`](drawings/work-sets/TAL-SET-A_base-to-upper-arm_rev-A.pdf) | TAL-101 base, TAL-102 shoulder, TAL-103 upper arm, TAL-108 hub cap, TAL-111 fit gauge | 43 |
-| B | [`TAL-SET-B_forearm-to-gripper_rev-A.pdf`](drawings/work-sets/TAL-SET-B_forearm-to-gripper_rev-A.pdf) | TAL-104 forearm, TAL-105 wrist, TAL-106 gripper body, TAL-107 moving jaw, TAL-110 idler plate | 44 |
+| A | [`TAL-SET-A_base-to-upper-arm_rev-A.pdf`](drawings/work-sets/TAL-SET-A_base-to-upper-arm_rev-A.pdf) | TAL-101 base, TAL-102 shoulder, TAL-103 upper arm, TAL-108 hub cap, TAL-111 fit gauge | 45 |
+| B | [`TAL-SET-B_forearm-to-gripper_rev-A.pdf`](drawings/work-sets/TAL-SET-B_forearm-to-gripper_rev-A.pdf) | TAL-104 forearm, TAL-105 wrist, TAL-106 gripper body, TAL-107 moving jaw, TAL-110 idler plate | 48 |
 
 - **Shared sheets:** both sets start with TAL-000, TAL-001 and TAL-002. Each person models servo pocket P and the common features from those, so both sides of every joint use the same geometry.
 - **Where the sets meet:** only at the elbow. The upper arm's end shell (set A) holds the elbow servo, and the forearm's clevis (set B) clamps its horns. Both are defined on TAL-001 and TAL-002, so check them against each other before printing. The idler plate (TAL-110, set B) also screws onto the upper arm (set A): its pocket and screw holes are on TAL-103.
@@ -173,7 +174,7 @@ The design language is original rather than a copy of the SO-101 parts. It uses:
 - separate graphite hub caps
 - slim 20 mm serrated jaws, centred on the wrist roll axis
 
-The geometry is lightweighted where mass costs the most torque, in the gripper, wrist and forearm. The moving arm is 525 g, 70 % of it servos. See [`../calcs/README.md`](../calcs/README.md) for the numbers.
+The geometry is lightweighted where mass costs the most torque, in the gripper, wrist and forearm. The moving arm is 524 g, 70 % of it servos. See [`../calcs/README.md`](../calcs/README.md) for the numbers.
 
 ## Printing
 
@@ -183,20 +184,49 @@ Talos follows SO-101's printing rules:
 - **Supports:** on, but ignore slopes steeper than 45° and block them in horizontal screw holes. Drill those holes to size afterwards (3.2 mm for M3, 2.4 mm for M2 clearance). Bridges print unsupported.
 - **Fit gauge first:** TAL-111, as above.
 
-Each part's orientation was chosen by measuring its overhang in all six orientations. Every part sits flat on one solid first layer (one connected footprint, checked by slicing each part 0.2 mm above the bed):
+Each part's orientation was chosen by measuring its overhang in all six orientations. Every part sits flat on a solid first layer, checked by slicing each part 0.2 mm above the bed. Each first layer is one connected piece, except on TAL-110 (see its row), and has no specks or slivers:
 
 | Part | On the bed | First layer | Support |
 | --- | --- | --- | --- |
 | TAL-101 Base | Plinth down | 15286 mm² | No support |
 | TAL-102 Shoulder | Turntable down | 3617 mm² | No support |
-| TAL-103 Upper arm | Flat underside down | 2637 mm² | No support (servo-opening roof and window tops bridge) |
-| TAL-104 Forearm | Flat underside down | 3273 mm² | No support (servo-opening roof and window tops bridge) |
+| TAL-103 Upper arm | Flat underside down | 2642 mm² | No support (servo-opening roof and window tops bridge) |
+| TAL-104 Forearm | Flat underside down | 3278 mm² | No support (servo-opening roof and window tops bridge) |
 | TAL-105 Wrist | Upside down, flat top face down | 1245 mm² | Support only under the idler plate's neck (5 mm up); the cradle floor and plug bay roof bridge |
 | TAL-106 Gripper body | Standing on the roll-horn disc | 1031 mm² | No support (one 32 mm bridge at the front of the servo opening); use a brim, the part is 108 tall |
-| TAL-107 Moving jaw | Horn plate down | 884 mm² | Support under the finger |
+| TAL-107 Moving jaw | Horn plate down | 886 mm² | Support under the finger |
 | TAL-108 Hub cap ×3 | Outer face down | 437 mm² | No support |
-| TAL-110 Idler plate ×2 | Outer face down | 589 mm² | No support |
+| TAL-110 Idler plate ×2 | Outer face down | 564 mm² | No support. The screw counterbores are on the bed face, so the first layer is two solid pieces (529 + 35 mm²). The small one is the lobe between the back two counterbores, joined to the plate 0.8 mm up. The hub can't grow to join them on the bed, because it has to clear the parent servo's plugs |
 | TAL-111 Servo fit gauge | Flat | 1018 mm² | No support. Print it first, with the same settings as the arm |
+
+## Dimension checks
+
+Each 3MF is written only after its part passes `part_checks.py`, which measures the print mesh itself. The mesh is already turned onto its print face, so the check covers the file the slicer gets, not just the model. Each probe casts rays at a feature the design calls for, written from the design constants and the STS3215 sizes:
+
+- **Holes:** every horn screw, centre, case screw, counterbore, pilot and mounting hole, sized and located to ±0.03 mm. Every ray from the hole's axis must land on the design radius.
+- **Joint geometry:** the pivot spacing L (the servo's R10.8 horn opening centred L from the clevis axis), plate thicknesses and inner faces, and the horn pads on the horn faces.
+- **Servo pockets:** every wall 0.3 to 1.0 mm off the servo's own faces, and the way in clear for 80 mm.
+- **Envelope:** heights, widths, the flat underside, the finger tip and width, the fit gauge windows, and the idler plate pocket.
+- **Mesh:** closed with no open or non-manifold edges, its volume equal to the solid's, and its lowest point on z = 0.
+- **First layer:** no first-layer island smaller than 5 mm².
+- **Fits, on the solids:** each bare servo sits in its pocket without touching and slides out along its way in. Each TAL-110 idler plate drops into its pocket.
+
+This check found and fixed three defects:
+
+- **Shoulder (TAL-102):** a 0.5 mm slit between the cradle walls and the cheeks. The cheeks now start on the walls.
+- **Output clevis plates (arm links, wrist, moving jaw):** they stood 0.2 mm off the horn face. They now have a Ø19 × 0.2 pad, like the idler side.
+- **Wrist (TAL-105):** its idler plate had lost its pad to the clevis gap cut. Both pads now stay.
+
+A wall-thickness scan of every mesh (rays cast inward from each face) also found unprintable thin spots, now fixed:
+
+- **0.4 mm walls** beside the servo's back pad channel in the upper arm, forearm, gripper and shoulder. A 0.4 mm doubler on the outside makes each one two perimeters. It is out of reach of the next link's idler plate, because the elbow and shoulder stop at about ±100–105°.
+- **0.2 mm webs** between each M3 counterbore and the centre hole, on the shoulder, gripper and idler plates. The centre is opened to Ø8.6 over the counterbore depth.
+- **A 0.3 mm rim** outside the idler plate's back counterbores, on the first layer. Those counterbores now run out through the rim.
+- **A knife edge** where each servo's plug bay meets its R10.8 idler opening. A small relief box blunts it.
+- **Thin edges** where two column flutes broke into the base's cable tunnel. Those two flutes now start above the tunnel.
+- **A 0.7 mm strip** where the moving jaw's grip notches ran into its horn plate. The notches now stop at the plate.
+
+What remains under 0.75 mm is either the snap-fit cable clip roofs (0.7 mm, flexible on purpose) or sharp outside corners.
 
 ## Regenerate
 
@@ -204,7 +234,8 @@ Each part's orientation was chosen by measuring its overhang in all six orientat
 python talos_arm.py               # ready pose -> talos_arm_assembly.step
 python talos_arm.py --pose zero   # -> talos_arm_zero.step
 python render.py                  # renders + interference report
-python print_files.py            # print-ready 3MF files -> print/
+python part_checks.py            # dimension and fit report for every part (verbose)
+python print_files.py            # checks each part, then writes print/ (nothing written for a part that fails)
 ```
 
 Requires `cadquery` (2.8) and, for `render.py`, `vtk` and `numpy`, which install with CadQuery. Add poses to `POSES` in `talos_arm.py` to export other configurations.

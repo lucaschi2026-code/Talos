@@ -5,7 +5,7 @@ the drawings and the README agree. 3MF carries millimetres, so parts import at t
 right size. The mesh is welded into one closed surface (no open edges, which some
 slicers flag), with a chord tolerance of 0.01 mm so the M3 and M2 holes stay round.
 
-    python print_files.py      # writes print/<part no>_<name>_rev-A.3mf
+    python print_files.py      # checks each part (part_checks.py), then writes print/<part no>_<name>_rev-A.3mf
 """
 
 import zipfile
@@ -66,21 +66,63 @@ def write_3mf(path, name, V, T):
         z.writestr("3D/3dmodel.model", model)
 
 
+def read_3mf(path):
+    """(vertices, triangles) back out of a written file."""
+    import re
+    with zipfile.ZipFile(path) as z:
+        m = z.read("3D/3dmodel.model").decode()
+    V = np.array(re.findall(r'<vertex x="([^"]+)" y="([^"]+)" z="([^"]+)"/>', m), float)
+    T = np.array(re.findall(r'<triangle v1="(\d+)" v2="(\d+)" v3="(\d+)"/>', m), int)
+    return V, T
+
+
+def first_layer(s, h=0.2):
+    """(area mm2, islands) of the part's slice 0 to h above the bed."""
+    import cadquery as cq
+    bb = s.BoundingBox()
+    sl = s.intersect(cq.Solid.makeBox(bb.xlen + 20, bb.ylen + 20, h, cq.Vector(bb.xmin - 10, bb.ymin - 10, 0)))
+    return sl.Volume() / h, sorted((p.Volume() / h for p in sl.Solids()), reverse=True)
+
+
 def main():
+    """Every part is checked before its file is written; nothing is written for a part that fails."""
+    import part_checks as pc
     OUT.mkdir(exist_ok=True)
     for f in OUT.glob("*.3mf"):
         f.unlink()
+    failed = []
     for part_no, (slug, qty, solid) in ta.printed_parts().items():
         down, note = ta.PRINT_SETUP[part_no]
         s = ta.on_bed(solid, down)
         V, T = welded_mesh(s)
         vol, open_edges, nonmanifold = check(V, T)
-        path = OUT / f"{part_no}_{slug}_rev-{REV}.3mf"
-        write_3mf(path, f"{part_no} {slug}", V, T)
         bb = s.BoundingBox()
-        print(f"{path.name}: x{qty}, {bb.xlen:.0f} x {bb.ylen:.0f} x {bb.zlen:.0f} mm, "
-              f"{len(T)} triangles, mesh {vol:.0f} / solid {s.Volume():.0f} mm3, "
-              f"{open_edges} open + {nonmanifold} non-manifold edges; {note}")
+        n_ok, fails = pc.check_part(part_no, solid, V, T)
+        area, islands = first_layer(s)
+        gate = {"closed mesh": open_edges == 0 and nonmanifold == 0,
+                "mesh volume = solid": abs(vol - s.Volume()) < 5e-3 * s.Volume(),
+                "on the bed": abs(V[:, 2].min()) < 1e-3,
+                "first layer: no specks or slivers (every island 5 mm2 or more)": min(islands) >= 5.0,
+                f"{n_ok}/{len(pc.PROBES[part_no])} dimensions": not fails}
+        bad = [k for k, ok in gate.items() if not ok]
+        path = OUT / f"{part_no}_{slug}_rev-{REV}.3mf"
+        if bad:
+            failed.append(part_no)
+            print(f"{path.name}: NOT WRITTEN, failed {', '.join(bad)}")
+            continue
+        write_3mf(path, f"{part_no} {slug}", V, T)
+        V2, T2 = read_3mf(path)
+        assert len(V2) == len(V) and len(T2) == len(T) and np.abs(V2 - V).max() < 1e-4, path
+        pieces = "one piece" if len(islands) == 1 else " + ".join(f"{a:.0f}" for a in islands) + " mm2"
+        print(f"{path.name}: x{qty}, {bb.xlen:.0f} x {bb.ylen:.0f} x {bb.zlen:.0f} mm, {len(T)} triangles, "
+              f"mesh {vol:.0f} / solid {s.Volume():.0f} mm3, closed, lowest point z {V[:, 2].min():+.4f}; "
+              f"first layer {area:.0f} mm2 in {pieces}; {n_ok}/{len(pc.PROBES[part_no])} dimensions OK; {note}")
+    for name, ok, txt in pc.fit_checks():
+        print(f"fit {'OK  ' if ok else 'FAIL'} {name}: {txt}")
+        if not ok:
+            failed.append(name)
+    if failed:
+        raise SystemExit(f"failed: {', '.join(failed)}")
 
 
 if __name__ == "__main__":

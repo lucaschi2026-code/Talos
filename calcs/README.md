@@ -12,7 +12,7 @@ Four scripts check the arm:
 
 | Check | Result | Status |
 | --- | --- | --- |
-| Moving mass | 525 g above the base, 741 g total | |
+| Moving mass | 524 g above the base, 739 g total | |
 | Shoulder holding, arm straight, 200 g | 1.73 N·m = 59 % of stall, 1.8× the 1/3 limit | ❌ over (first calc: 1.62) |
 | Elbow holding, arm straight, 200 g | 1.06 N·m, 1.08× the limit | ⚠️ just over (first calc: 0.96) |
 | Wrist flex / roll | 0.43 / 0.004 N·m | ✅ |
@@ -52,6 +52,8 @@ The SO-101-style revision fixed the idler side of every clevis: the idler plates
 
 The flat-first-layer revision made every part sit on one solid footprint: the arm links' beams got square bottom corners and a short floor under the nose, the wrist got a flat top face to print upside down on, and the hub cap lost its face groove. Moving mass 525 g (+2 g); torques, joint ranges and beam stresses unchanged.
 
+The dimension-check revision fixed what measuring every print mesh turned up. The shoulder's cheeks now fuse to the cradle walls, closing a 0.5 mm slit. The output clevis plates gained a Ø19 × 0.2 pad on the horn face, and the wrist's idler pad was restored. 0.4 mm doublers now sit over the back-pad channels, and thin webs and slivers around the counterbores, plug bays and base flutes were removed (see `../cad/README.md`, Dimension checks). Moving mass 524 g (−1 g: filling the slit removed two internal wall surfaces from the shoulder). Torques, joint ranges and beam stresses are unchanged.
+
 The base was left alone on purpose. It's fixed, so it adds no joint torque, and its weight works against tipping.
 
 The gains are modest because 69 % of the moving mass is servos (6 × 61 g). The printed parts are already mostly 20 % infill, so their weight is in the outer skin. Cutting more plastic would cost stiffness for little torque.
@@ -69,7 +71,7 @@ SO-101 numbers come from its own URDF via [`so101_compare.py`](so101_compare.py)
 | Shoulder axis offset from pan axis | 30.4 mm forward | 0 (centred) |
 | Tool point from shoulder axis | 410 mm | 402 mm (420 to the jaw tip) |
 | Tool point from pan axis, reaching forward | 441 mm | 402 mm |
-| Moving mass | 485 g | 525 g (495 g without the 30 g screws and cable allowance the URDF leaves out) |
+| Moving mass | 485 g | 524 g (494 g without the 30 g screws and cable allowance the URDF leaves out) |
 | Shoulder, straight out, 200 g | 1.67 N·m | 1.73 N·m |
 | Elbow, straight out, 200 g | 1.03 N·m | 1.06 N·m |
 | Wrist flex, straight out, 200 g | 0.43 N·m | 0.43 N·m |
@@ -97,7 +99,7 @@ Shortening the forearm barely helps. At 115 mm the elbow just drops under the li
 
    ![Payload envelope](payload_envelope.png)
 
-2. **Fix the base down.** With the arm straight out, the whole arm's centre of mass is 186 mm out and the base edge is only 64 mm out. The two rear M4 holes need about 6 N each, which is trivial, but they must be used (or a table clamp, like SO-101).
+2. **Fix the base down.** With the arm straight out, the whole arm's centre of mass is 188 mm out and the base edge is only 64 mm out. The two rear M4 holes need about 6 N each, which is trivial, but they must be used (or a table clamp, like SO-101).
 3. **No pan bearing ring for v1. Measure the turntable and keep the retrofit ready.**
    - **The load:** the pan servo carries the arm's whole overturning moment through its own shaft (1.77 N·m with 200 g at the tip), and Feetech publishes no rating for that.
    - **The precedent:** SO-101 runs the same servo the same way. Its shoulder axis sits 30.4 mm forward of the pan axis, so reaching forward its pan shaft sees 1.87 N·m with 200 g. Talos is about 5 % below that, because its shoulder axis is centred.
@@ -151,12 +153,12 @@ With the CAD inputs, the formula gives **1.77 N·m at the shoulder (60 % of stal
 
 | Result | Value |
 | --- | --- |
-| Pan shaft moment, Talos | 0.94 N·m unloaded, 1.77 N·m with 200 g at the tip |
+| Pan shaft moment, Talos | 0.95 N·m unloaded, 1.77 N·m with 200 g at the tip |
 | Pan shaft moment, SO-101 (URDF, reaching forward) | 1.01 N·m unloaded, 1.87 N·m with 200 g at its tool point |
-| Talos / SO-101 | 0.94× unloaded, 0.95× loaded |
+| Talos / SO-101 | 0.94× unloaded, 0.94× loaded |
 | Axial load on the pan servo | 7.1 N |
-| Whole-arm CoM | 187 mm from the base axis; the front edge is 64 mm out |
-| Tipping | Tips at 1.15 N·m net, so it needs 5.7 N per rear M4 bolt |
+| Whole-arm CoM | 188 mm from the base axis; the front edge is 64 mm out |
+| Tipping | Tips at 1.16 N·m net, so it needs 5.7 N per rear M4 bolt |
 | Rim lift → tip error | ×11.4: 0.05 mm → 0.57 mm, 0.1 → 1.14, 0.2 → 2.27, 0.3 → 3.41 |
 
 These figures come from a Python transliteration of the script, with the payload at the tip. `design_check.py` puts it at mid-jaw, so its numbers run slightly lower. Open `pan_base_check.m` in MATLAB and press F5 to confirm them. It also saves `pan_moment.png`.

@@ -114,7 +114,7 @@ CHAIN = (0, (6, 1.5, 1, 1.5))               # centre / cutting-plane line patter
 
 # The parts are split into two work sets so two people can model them in parallel.
 # The reference sheets (TAL-0xx) go in both. The split is balanced on modelling steps
-# (A 43, B 44). The sets only meet at the elbow (upper arm shell -> forearm clevis), and
+# (A 45, B 48). The sets only meet at the elbow (upper arm shell -> forearm clevis), and
 # both sides of it are defined on the shared sheets (servo pocket P, clevis).
 WORK_SETS = {
     "A": ("base-to-upper-arm", "base, shoulder, upper arm, hub caps, fit gauge",
@@ -906,6 +906,9 @@ def sheet_idler():
         f"Centre hole {DIA}7 through: clears the servo's idler boss (nothing screws into the boss).",
         f"Horn holes: 4X {DIA}3.2 through on {DIA}13.86 PCD at 45°, counterbore {DIA}6.5 0.8 deep from "
         f"the outer face (4X M3 × 6 into the passive horn).",
+        f"Counterbore clean-up, 0.8 deep from the outer face: {DIA}8.6 on the centre (no thin web between the "
+        f"counterbores and the centre hole); the two counterbores at x < 0 run out through the hub rim "
+        f"(second {DIA}6.5 3 further out along each one's radius), so no sliver is left on the first layer.",
         f"Tab holes: 2X {DIA}3.4 through at x 26, z ±7 (M3 × 10 into the arm link).",
     ])
     s.notes(GENERAL + [
@@ -1002,7 +1005,9 @@ def sheet_jaw():
         "Plate, y 18.9 to 22.9: circle R13 at the origin + polygon A B C D.",
         "Finger, y -10 to 10: polygon F1 F2 F3 F4 F5 F6.",
         "Knuckle, y 10 to 18.9: polygon F1 B C F5 F6.",
-        "Grip notches: 6X V-notch through Y on the finger's lower edge, 3 wide × 1.6 deep, pitch 6, first at x 30.",
+        "Grip notches: 6X V-notch on the finger's lower edge, y -10 to 18.9 (finger and knuckle; the "
+        "plate is not notched), 3 wide × 1.6 deep, pitch 6, first at x 30.",
+        f"Pad {DIA}19 on the plate's inner face, y 18.7 to 18.9: bears on the output horn face.",
         f"Horn holes through the plate: {DIA}7 centre + 4X {DIA}3.2 on {DIA}13.86 PCD at 45°.",
     ]
     s.features("FEATURES (in order)", feats)
@@ -1079,6 +1084,8 @@ def sheet_servo():
         "Main box x -35.5 to 10.5, y ±12.7, z ±16.2.",
         "Back pad box x -30.2 to -19.6, y ±9.5, z -18.0 to -15.5.",
         "Plug bay box x -17.6 to -10.6, y ±10.6, z -28.5 to -15.5 (mated plugs + cable bend).",
+        "Relief box x -10.6 to -9.0, y ±4.5, z -18.5 to -15.5: no knife edge where the plug bay meets "
+        f"the idler {DIA}21.6.",
         f"Idler clearance cylinder {DIA}21.6 on the shaft axis, z -18.5 to -15.0.",
         f"Horn clearance cylinder {DIA}21.6 on the shaft axis, z 15.0 to 19.5.",
     ])
@@ -1121,14 +1128,17 @@ def sheet_common():
         "* Not printed on its own: the plates are modelled into the links. On TAL-103 and TAL-104 the "
         "idler plate is the separate part TAL-110; on the wrist (TAL-105) both plates are wrist body.",
         "Output plate (+Y), y 18.9 to 22.9: circle R16 at the origin + rectangle x 0 to R, z ±H.",
+        f"Output plate pad {DIA}19 on the inner face, y 18.7 to 18.9: bears on the output horn face (the "
+        "plate itself clears the parent servo's shell by 0.5).",
         f"Output plate holes, through: {DIA}7 centre (horn spline screw) + 4X {DIA}3.2 on {DIA}13.86 PCD at 45°.",
         "Idler plate (-Y), y -22.9 to -18.9: circle R10.5 + neck polygon N1 to N4 (mirrored). The neck "
         "clears the parent servo's bus plugs.",
         f"Idler plate pad {DIA}19 on the inner face, y -18.9 to -17.7, bearing on the passive horn; centre "
         f"{DIA}7 through (clears the idler boss); 4X {DIA}3.2 on {DIA}13.86 PCD at 45°, counterbore {DIA}6.5 "
-        f"0.8 deep from outside (4X M3 × 6 into the passive horn, which turns on the boss).",
+        f"0.8 deep from outside (4X M3 × 6 into the passive horn, which turns on the boss); {DIA}8.6 0.8 deep "
+        f"on the centre, and the two counterbores at x < 0 run out through the hub rim (see TAL-110).",
         "Clevis gap in the link body: remove a cylinder R21 about Y between y ±18.9, and everything at "
-        "x < 0 between those planes (dimensioned on each link's section).",
+        "x < 0 between those planes, except the two horn pads (dimensioned on each link's section).",
     ])
     s1.notes(GENERAL)
 
@@ -1226,7 +1236,8 @@ def sheet_base():
         f"Collar {DIA}90, z 10 to 14, C2 on its top edge.",
         f"Column {DIA}80, z 10 to {fmt(top)}, C1.5 on its top edge.",
         f"Board standoffs: 4X {DIA}6.4, z 9 to 15, at x -57.5 / -85.5, y ±18.5; pilot {DIA}2.1 from z 8 to 16.",
-        f"Flutes: 18X vertical {DIA}5.2 on R41.4 at 10° + 20°n, axis z 19 to 52, spherical ends; cut.",
+        f"Flutes: 18X vertical {DIA}5.2 on R41.4 at 10° + 20°n, axis z 19 to 52 (z 28 to 52 for the two at "
+        f"170° and 190°, over the cable tunnel), spherical ends; cut.",
         pocket_note((0, 0, ta.H_PAN - 18.7), "+Z", "+X", "+Y"),
         f"Top opening: cut box x -36 to 11, y ±12.7, from z {fmt(top - 1)} up.",
         "Cable tunnel (plug bay to board deck): cut box x -60 to -13, y ±6, z 14.8 to 24.5.",
@@ -1293,14 +1304,17 @@ def sheet_shoulder():
         f"Turntable {DIA}74, z 0 to 6; C2 top edge, C0.8 bottom edge.",
         "Cradle: box x ±17, y ±18.4, z 5 to 34.",
         f"Posts: boxes x -17 to -12.9 and 12.9 to 17, y ±18.4, z 30 to {fmt(ta.H_SH + 4)}.",
-        "Cheeks: profile T1 to T4, y 18.9 to 25 and -25 to -18.9.",
+        "Cheeks: profile T1 to T4, y 18.4 to 25 and -25 to -18.4 (fused to the cradle walls).",
+        f"Doubler on the -Y cradle wall: box x ±10.5, y -18.8 to -18.4, z {fmt(ta.H_SH - 31.2)} to 34 (keeps the "
+        "wall beside the back pad channel 0.8 thick).",
         "Cable clip (TAL-002) on the -X face: centre (-17, -9, 21), cable along Z.",
         pocket_note((0, 0, ta.H_SH), "+Y", "+Z (body hangs down)", "+X"),
         "Servo opening: cut box x ±12.7, y ±16.2, from z 10 up. Servo entry channels in the -Y cradle wall: "
         "back pad channel x ±9.5, y -18 to -16.2, from z 15.8 up; plug slot through the wall x ±10.6, from z 28.4 up.",
         f"Cable hole {DIA}8 along Y, through all, at x 0, z 14.",
         f"Pan horn: {DIA}7 centre through. 4X {DIA}3.2 through on {DIA}13.86 PCD at 45°, counterbore "
-        f"{DIA}6.5 from the floor (z 10) down to z 4 (M3 × 6 from inside the cradle).",
+        f"{DIA}6.5 from the floor (z 10) down to z 4 (M3 × 6 from inside the cradle); centre opened to "
+        f"{DIA}8.6 over the same depth (no thin web between the counterbores and the centre hole).",
         "Turntable windows: 4X arc slot R27 to R33, ±18° about 0°, 90°, 180°, 270°, through.",
         f"Case screw holes (TAL-002, seat 18.5) through the cheeks: +Y cheek at x ±10.2, z 17; "
         f"-Y cheek at x ±10.2, z 13.2.",
@@ -1408,8 +1422,8 @@ def sheet_arm(upper=True):
         s1.cut_line("front", ((x, 0, -18), (x, 0, 18)), np.array([-1, 0, 0]), letter)
     s1.cut_line("top", ((-18, 0, 0), (L + 20, 0, 0)), np.array([0, 1, 0]), "D")
     s1.features("FEATURES (in order)", [
-        "Clevis output plate only (TAL-002, +Y plate), R = 30, H = 15. The idler plate is the "
-        "separate part TAL-110.",
+        "Clevis output plate only (TAL-002, +Y plate with its horn pad), R = 30, H = 15. The idler plate "
+        "is the separate part TAL-110.",
         f"Beam: ruled loft of the profiles A, B, C (sheet 2) at x {fmt(x0)}, {fmt(xm)}, {fmt(x1)}. "
         f"Every profile sits on z {fmt(zb)}, so the underside is flat; the waist dips on top only.",
         f"Servo shell: XZ polygon ({fmt(L - 38.2)}, {fmt(zb)}) ({fmt(L)}, {fmt(zb)}) ({fmt(L)}, 15.4) "
@@ -1418,10 +1432,13 @@ def sheet_arm(upper=True):
         f"Flat underside: cut everything below z {fmt(zb)} (trims the clevis hub and the R18 cylinder).",
         f"Nose floor: box x {fmt(L + 9)} to {fmt(L + 13.5)}, y ±18.4, z {fmt(zb)} to {fmt(zb + 4)}; ties the shell "
         f"walls together on the bed (the servo entry cut later trims its back to x {fmt(L + 10.5)}).",
+        f"Doubler on the -Y wall: box x {fmt(L - 31.2)} to {fmt(L - 18.6)}, y -18.8 to -18.4, z {fmt(zb)} to "
+        "10.5 (keeps the wall beside the back pad channel 0.8 thick; out of the next link's reach).",
         f"Spine: ruled loft of the ridge profiles A, B, C, trimmed to x {fmt(x0 + 8)} to {fmt(x1 - 4)}.",
         "Windows: polygons W1 to W4 and W5 to W8 (mirrored in Z), cut through Y.",
         f"Cable clip (TAL-002) on the -Y flank at x {fmt(xm)}, cable along X.",
-        "Clevis gap cut (TAL-002): R21 about Y between y ±18.9, plus x < 0 between those planes.",
+        "Clevis gap cut (TAL-002): R21 about Y between y ±18.9, plus x < 0 between those planes; the "
+        "output pad stays.",
         pocket_note((L, 0, 0), "+Y", "+X", "-Z"),
         f"Servo entry from below: cut box x {fmt(L - 35.5)} to {fmt(L + 10.5)}, y ±16.2, z below 12.7 "
         f"(opens the floor under the whole servo). In the -Y wall: back pad channel x {fmt(L - 30.2)} to "
@@ -1504,7 +1521,7 @@ def sheet_wrist():
         "Flat top: cut everything above z 13.6 (trims the clevis hubs), so the wrist prints upside down "
         "on one face.",
         "Cable clip (TAL-002) on the -Y face: centre (46, -15.2, -30), cable along X.",
-        "Clevis gap cut (TAL-002).",
+        "Clevis gap cut (TAL-002); both horn pads stay.",
         pocket_note((xs, 0, 0), "+X", "+Z (body hangs down)", "-Y"),
         f"Cradle interior: cut box x {fmt(xs - 16)} to the +X end, y ±12.7, z -36 to 11.",
         f"Plug bay exit to -Y: cut boxes x {fmt(xs - 28.5)} to {fmt(xs - 15.5)}: y -18.6 to 0, z -17.6 to -10.6; "
@@ -1575,6 +1592,8 @@ def sheet_gripper():
         f"Housing: box x 0 to {fmt(XJ)}, y ±18.4, z {fmt(ZJ - 15.4)} to {fmt(ZJ + 15.4)}; C3 on the edges "
         f"parallel to Y; plus a cylinder R18 about Y at (x, z) = ({fmt(XJ)}, {fmt(ZJ)}).",
         "Keel K1 to K5 and finger F1 to F7, each extruded y ±10.",
+        f"Doubler on the -Y wall: box x {fmt(XJ - 31.2)} to {fmt(XJ - 18.6)}, y -18.8 to -18.4, z {fmt(ZJ - 10.5)} "
+        f"to {fmt(ZJ + 15.4)} (keeps the wall beside the back pad channel 0.8 thick).",
         pocket_note((XJ, 0, ZJ), "+Y", "+X", "-Z"),
         f"Servo entry from the top: cut box x {fmt(XJ - 35.5)} to {fmt(XJ + 10.5)}, y ±16.2, z {fmt(ZJ - 12.7)} up "
         f"(opens the top over the whole servo). In the -Y wall: back pad channel x {fmt(XJ - 30.2)} to "
@@ -1583,7 +1602,8 @@ def sheet_gripper():
         f"Side windows: hex window H(9, 33, {fmt(ZJ)}, 7) through Y (TAL-002).",
         "Grip notches: 6X triangle (x, 0) (x+1.5, -1.6) (x+3, 0), x = 72, 78 ... 102, through Y.",
         f"Roll horn (sheet 2): {DIA}7 centre, x -1 to 7. 4X {DIA}3.2 on {DIA}13.86 PCD at 45°, x -1 to 3.5, "
-        f"counterbore {DIA}6.5 from x 3.5 to 7 (M3 × 6 from inside the housing).",
+        f"counterbore {DIA}6.5 from x 3.5 to 7 (M3 × 6 from inside the housing); centre opened to {DIA}8.6 "
+        f"from x 3.5 to 7 (no thin web between the counterbores and the centre hole).",
         "Case screw holes (TAL-002, seat 17.3): +Y face at x 13, z -4.2 and 16.2; -Y face at x 9.2, "
         "z -4.2 and 16.2.",
     ])

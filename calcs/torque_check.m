@@ -23,8 +23,8 @@ m     = [0.114, 0.119, 0.092, 0.101, 0.200];
 
 % Centre-of-mass offsets (m), each measured from the START of its own segment
 d_upper   = 0.0810;     % from shoulder axis (elbow servo pulls COM toward the elbow)
-d_fore    = 0.0938;     % from elbow axis
-d_wrist   = 0.0382;     % from wrist-flex axis
+d_fore    = 0.0939;     % from elbow axis
+d_wrist   = 0.0381;     % from wrist-flex axis
 d_gripper = 0.1017;     % from wrist-flex axis
 d_payload = L_tip;      % from wrist-flex axis (held at the tip)
 

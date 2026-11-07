@@ -7,7 +7,7 @@ Limit:    0.98 N*m (33% of stall)
     ____________________________    _____    ___________
 
     "upper arm + elbow servo"       0.114      0.09059  
-    "forearm + wrist-flex servo"    0.119      0.24492  
-    "wrist + wrist-roll servo"      0.092      0.26101  
+    "forearm + wrist-flex servo"    0.119      0.24504  
+    "wrist + wrist-roll servo"      0.092      0.26092  
     "gripper + jaw servo"           0.101      0.34946  
     "payload"                       0.200      0.82404  

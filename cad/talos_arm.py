@@ -43,11 +43,14 @@ XJ, ZJ = 42.0, 6.0  # jaw pivot in the gripper frame
 SHELL_IN, SHELL_OUT = 16.2, 18.4   # shell walls beside the servo caps
 CLV_IN, CLV_OUT = 18.9, 22.9       # clevis plates on the next link's horns
 IDLER_HUB_R = 10.5                 # idler-side plate hub: just over the passive horn, inside the plugs
+HORN_FACE = 18.7                   # output horn's outer face, from the servo mid-plane
 PASSIVE_FACE = 17.7                # passive horn's outer face, from the servo mid-plane
-PAD_R = 9.5                        # idler plate pad that bears on the passive horn
+PAD_R = 9.5                        # clevis plate pads that bear on the horns (inside the shell's R10.8 opening)
 IDLER_CBORE = 0.8                  # passive-horn screw heads sit this deep in the idler plate
 Z_BED = -15.0                      # arm links print standing on this flat underside
 WRIST_TOP = 13.6                   # the wrist prints upside down on its flat top face
+DOUBLER = 0.4                      # outside the back-pad channel the wall is 0.4 thick; this makes it 0.8
+WEB_R = 4.3                        # centre hole widened where the M3 counterbores would leave a 0.2 mm web
 FOREARM = dict(h0=28.0, h1=30.8, w_mid=32.0, h_mid=24.0)  # arm_link() sizes for the forearm
 
 POSES = {
@@ -196,6 +199,7 @@ def servo_pocket(r_clear=0.3):
     x0, x1, y0, y1, z0 = PLUG_ZONE
     env = env.union(box(x0, x1, y0, y1, z0, -15.5))                                 # plug bay
     env = env.union(cyl_z(10.0 + 0.8, -18.5, -15.0))
+    env = env.union(box(x1, x1 + 1.6, -4.5, 4.5, -18.5, -15.5))  # no knife edge where the bay meets the R10.8
     env = env.union(cyl_z(10.0 + 0.8, 15.0, 19.5))
     return env
 
@@ -327,8 +331,9 @@ def base_parts():
     for k in range(18):  # column fluting
         a = math.radians(10 + 20 * k)
         x, y = 41.4 * math.cos(a), 41.4 * math.sin(a)
-        flute = cyl_z(2.6, 19, 52, x, y)
-        flute = flute.union(cq.Workplane("XY").sphere(2.6).translate((x, y, 19)))
+        z0 = 28 if x < 0 and abs(y) < 9 else 19  # the two over the cable tunnel start above it
+        flute = cyl_z(2.6, z0, 52, x, y)
+        flute = flute.union(cq.Workplane("XY").sphere(2.6).translate((x, y, z0)))
         flute = flute.union(cq.Workplane("XY").sphere(2.6).translate((x, y, 52)))
         body = body.cut(flute)
     servo_loc = T(0, 0, H_PAN - 18.7)
@@ -353,16 +358,19 @@ def shoulder_parts():
     cradle = try_chamfer(cradle, "|Y", 3.0)
     posts = box(-17, 17, -SHELL_OUT, SHELL_OUT, 30, H_SH + 4)
     posts = posts.cut(box(-12.9, 12.9, -30, 30, 0, 80))
-    cheeks = prism_xz([(-24, 6), (24, 6), (14, 21), (-14, 21)], CLV_IN, 25.0)
-    cheeks = cheeks.union(prism_xz([(-24, 6), (24, 6), (14, 21), (-14, 21)], -25.0, -CLV_IN))
-    body = turntable.union(cradle).union(posts).union(cheeks)
+    # cheeks start on the cradle wall (no slit between them) and carry the case screw heads
+    cheeks = prism_xz([(-24, 6), (24, 6), (14, 21), (-14, 21)], SHELL_OUT, 25.0)
+    cheeks = cheeks.union(prism_xz([(-24, 6), (24, 6), (14, 21), (-14, 21)], -25.0, -SHELL_OUT))
+    # doubler over the back-pad channel above the -Y cheek (the upper arm's idler plate can't reach it)
+    doubler = box(-10.5, 10.5, -SHELL_OUT - DOUBLER, -SHELL_OUT, H_SH - 31.2, 34)
+    body = turntable.union(cradle).union(posts).union(cheeks).union(doubler)
     # clip on the cradle's back face anchors the pan service loop
     body = body.union(cable_clip((-17, -9, 21), ((0, 0, -1), (0, 1, 0), (1, 0, 0))))
     body = body.cut(pocket_in(servo_loc)).cut(box(-12.7, 12.7, -16.2, 16.2, 10, 80))
     body = body.cut(moved(servo_entry("+x"), servo_loc))  # servo goes in from the top, bottom end first
     body = body.cut(cyl_y(4, -30, 30, 0, 14))
     # pan horn: centre access and four M3 screws from inside the cradle
-    body = body.cut(cyl_z(3.5, -1, 11))
+    body = body.cut(cyl_z(3.5, -1, 11)).cut(cyl_z(WEB_R, 4, 11))
     screws = []
     for x, y in HORN_HOLES:
         body = body.cut(cyl_z(SCREW[3]["clear"], -1, 4, x, y)).cut(cyl_z(SCREW[3]["cbore"], 4, 11, x, y))
@@ -386,7 +394,16 @@ def clevis_plate(hub_r=16.0, reach=30.0, half_h=15.0):
     out = (cq.Workplane("XZ").circle(hub_r).extrude(-t)
            .union(prism_xz([(0, -half_h), (reach, -half_h), (reach, half_h), (0, half_h)], 0, t))
            .translate((0, CLV_IN, 0)))
+    # the plate clears the parent shell by 0.5 mm, so a 0.2 mm pad reaches the horn face
+    out = out.union(cyl_y(PAD_R, HORN_FACE, CLV_IN))
     return out.cut(horn_holes_y(CLV_IN - 1, CLV_OUT + 1))
+
+
+def between_plates():
+    """Space between a link's clevis plates, kept clear for the parent servo's shell.
+    The horn pads stay: they sit inside the shell's R10.8 horn openings."""
+    keep = cyl_y(PAD_R, HORN_FACE, CLV_IN).union(cyl_y(PAD_R, -CLV_IN, -PASSIVE_FACE))
+    return cyl_y(21.0, -CLV_IN, CLV_IN).union(box(-30, 0, -CLV_IN, CLV_IN, -30, 30)).cut(keep)
 
 
 def idler_neck(reach=30.0, half_h=15.0, grow=0.0):
@@ -416,9 +433,14 @@ def idler_plate(reach=30.0, half_h=15.0, tab=False):
     # servo's idler boss; nothing is screwed into the boss itself. A pad reaches the horn face.
     idl = idl.union(cyl_y(PAD_R, -CLV_IN, -PASSIVE_FACE))
     idl = idl.cut(cyl_y(3.5, -CLV_OUT - 1, -PASSIVE_FACE + 1))       # centre: clears the boss
+    sink = (-CLV_OUT - 1, -CLV_OUT + IDLER_CBORE)
+    idl = idl.cut(cyl_y(WEB_R, *sink))  # no 0.2 mm webs between the counterbores and the centre hole
     for x, z in HORN_HOLES:
         idl = idl.cut(cyl_y(SCREW[3]["clear"], -CLV_OUT - 1, -PASSIVE_FACE + 1, x, z))
-        idl = idl.cut(cyl_y(SCREW[3]["cbore"], -CLV_OUT - 1, -CLV_OUT + IDLER_CBORE, x, z))
+        idl = idl.cut(cyl_y(SCREW[3]["cbore"], *sink, x, z))
+        if x < 0:  # the back two counterbores run out through the hub rim instead of leaving a 0.3 mm sliver
+            a = math.atan2(z, x)
+            idl = idl.cut(cyl_y(SCREW[3]["cbore"], *sink, x + 3.0 * math.cos(a), z + 3.0 * math.sin(a)))
     if tab:
         for x, z in IDLER_TAB_SCREWS:
             idl = idl.cut(cyl_y(SCREW[3]["clear"] + 0.1, -CLV_OUT - 1, -CLV_IN + 1, x, z))
@@ -544,6 +566,8 @@ def arm_link(L, h0=30.0, h1=30.8, w_mid=34.0, h_mid=25.0, spine=True, servo_entr
     body = body.cut(box(-40, L + 40, -40, 40, -60, Z_BED))  # flat underside: hub and shell trimmed
     # nose floor just past the servo: ties both shell walls together on the bed (stays inside R21)
     body = body.union(box(L + 9.0, L + 13.5, -SHELL_OUT, SHELL_OUT, Z_BED, Z_BED + 4))  # servo entry cuts its back
+    # doubler over the back-pad channel in the -Y wall (beyond the next link's reach, |elbow| <= 105 deg)
+    body = body.union(box(L - 31.2, L - 18.6, -SHELL_OUT - DOUBLER, -SHELL_OUT, Z_BED, 10.5))
     if spine:
         ridge = ruled_loft([(x, ridge_profile(h)) for x, _, h, _ in st])
         body = body.union(ridge.intersect(box(x0 + 8, x1 - 4, -10, 10, -40, 40)))
@@ -560,7 +584,7 @@ def arm_link(L, h0=30.0, h1=30.8, w_mid=34.0, h_mid=25.0, spine=True, servo_entr
         body = body.cut(prism_xz([(a, 0), (a + ka, -half(a + ka)), (b - kb, -half(b - kb)), (b, 0),
                                   (b - kb, half(b - kb)), (a + ka, half(a + ka))], -30, 30))
     body = body.union(cable_clip((xm, -w_mid / 2 - 0.2, 0), CLIP_NEG_Y))  # bus cable, -Y side
-    body = body.cut(cyl_y(21.0, -CLV_IN, CLV_IN)).cut(box(-30, 0, -CLV_IN, CLV_IN, -30, 30))
+    body = body.cut(between_plates())
     body = body.cut(pocket_in(servo_loc))
     if servo_entry_below:  # servo pushes straight up from below: floor open under its whole length
         body = body.cut(moved(servo_entry(), servo_loc))
@@ -591,7 +615,7 @@ def wrist_parts():
     body = body.cut(horn_holes_y(CLV_IN - 1, CLV_OUT + 1))  # re-cut the horn holes the extension covered
     body = body.union(bridge).union(cradle).cut(box(-40, 80, -40, 40, top, 40))
     body = body.union(cable_clip((46, -15.2, -30), CLIP_NEG_Y))
-    body = body.cut(cyl_y(21.0, -CLV_IN, CLV_IN)).cut(box(-30, 0, -CLV_IN, CLV_IN, -30, 30))
+    body = body.cut(between_plates())  # keeps both horn pads
     body = body.cut(pocket_in(servo_loc)).cut(box(xs - 16.0, 80, -12.7, 12.7, -36, 11))
     # roll servo plugs face the wrist axis; the cable leaves the bay under the -Y lug
     body = body.cut(box(xs - 28.5, xs - 15.5, -18.6, 0, -17.6, -10.6))
@@ -623,7 +647,8 @@ def gripper_parts():
                     -FINGER_HW, FINGER_HW)
     finger = prism_xz([(48, -9.4), (54, -9.4), (66, -0.5), (108, -0.5), (108, -6),
                        (64, -17), (48, -17)], -FINGER_HW, FINGER_HW)
-    body = disc.union(housing).union(keel).union(finger)
+    doubler = box(XJ - 31.2, XJ - 18.6, -SHELL_OUT - DOUBLER, -SHELL_OUT, ZJ - 10.5, ZJ + 15.4)  # back-pad channel
+    body = disc.union(housing).union(keel).union(finger).union(doubler)
     body = body.cut(pocket_in(servo_loc))
     body = body.cut(moved(servo_entry("-y"), servo_loc))  # jaw servo goes in from the top
     body = body.cut(prism_xz(hex_pts(9, 33, ZJ, 7), -30, 30))  # side windows onto the servo
@@ -632,7 +657,7 @@ def gripper_parts():
         body = body.cut(prism_xz([(x, 0), (x + 1.5, -1.6), (x + 3, 0)], -13, 24))
     # roll horn: four M3 from inside the housing (counterbored), centre access
     screws = []
-    body = body.cut(cyl_x(3.5, -1, 7))
+    body = body.cut(cyl_x(3.5, -1, 7)).cut(cyl_x(WEB_R, 3.5, 7))
     for y, z in HORN_HOLES:
         body = body.cut(cyl_x(SCREW[3]["clear"], -1, 3.5, y, z)).cut(cyl_x(SCREW[3]["cbore"], 3.5, 7, y, z))
         screws.append(screw(3, 6, (3.5, y, z), "-x"))
@@ -646,7 +671,8 @@ def moving_jaw():
     """Moving jaw in its pivot frame (pivot at origin, rotates about Y)."""
     plate = (cq.Workplane("XZ").circle(13).extrude(-(CLV_OUT - CLV_IN))
              .union(prism_xz([(0, -13), (34, -5.5), (34, 9.1), (0, 13)], 0, CLV_OUT - CLV_IN))
-             .translate((0, CLV_IN, 0)))
+             .translate((0, CLV_IN, 0))
+             .union(cyl_y(PAD_R, HORN_FACE, CLV_IN)))  # pad on the horn face
     profile = [(22, -5.5), (64, -5.5), (64, -1.5), (52, 5), (30, 10), (22, 9)]
     finger = prism_xz(profile, -FINGER_HW, FINGER_HW)
     knuckle = prism_xz([(22, -5.5), (34, -5.5), (34, 9.1), (30, 10), (22, 9)],
@@ -654,7 +680,7 @@ def moving_jaw():
     body = plate.union(finger).union(knuckle)
     for k in range(6):
         x = 30 + 6 * k
-        body = body.cut(prism_xz([(x, -5.5), (x + 1.5, -3.9), (x + 3, -5.5)], -13, 24))
+        body = body.cut(prism_xz([(x, -5.5), (x + 1.5, -3.9), (x + 3, -5.5)], -13, CLV_IN))  # finger only
     return body.cut(horn_holes_y(CLV_IN - 1, CLV_OUT + 1))
 
 
@@ -695,13 +721,15 @@ def printed_parts():
             "TAL-110": ("idler-plate", 2, idler), "TAL-111": ("servo-fit-gauge", 1, fit_gauge()[0])}
 
 
+BED_ROT = {"-Z": None, "+Z": ((1, 0, 0), 180), "+Y": ((1, 0, 0), -90), "-Y": ((1, 0, 0), 90),
+           "-X": ((0, 1, 0), -90), "+X": ((0, 1, 0), 90)}  # rotation that puts each face down
+
+
 def on_bed(solid, down):
     """Turn a part so its `down` face ("-Z", "+Y", ...) sits on z = 0, centred on the origin."""
-    rot_for = {"-Z": None, "+Z": ((1, 0, 0), 180), "+Y": ((1, 0, 0), -90), "-Y": ((1, 0, 0), 90),
-               "-X": ((0, 1, 0), -90), "+X": ((0, 1, 0), 90)}
     s = solid.val() if isinstance(solid, cq.Workplane) else solid
-    if rot_for[down]:
-        axis, deg = rot_for[down]
+    if BED_ROT[down]:
+        axis, deg = BED_ROT[down]
         s = s.rotate(cq.Vector(0, 0, 0), cq.Vector(*axis), deg)
     bb = s.BoundingBox()
     return s.translate(cq.Vector(-(bb.xmin + bb.xmax) / 2, -(bb.ymin + bb.ymax) / 2, -bb.zmin))
