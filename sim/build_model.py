@@ -462,7 +462,7 @@ def main():
 
     write_mjcf(OUT / "talos.xml", table, info, cad, calc)
     write_mjcf(OUT / "talos_pick.xml", table, info, cad, calc,
-               block=dict(half=0.0125, mass=calc["PAYLOAD"], pos=[0.16, 0.13, 0.0125]))  # clear of the ready pose
+               block=dict(half=0.0125, mass=calc["PAYLOAD"], pos=[0.0, 0.19, 0.0125]))  # clear of the ready pose, and square to the gripper at 90 deg of pan
     (OUT / "build_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(f"wrote {OUT / 'talos.xml'}")
 

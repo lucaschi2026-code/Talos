@@ -15,6 +15,7 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 JOINTS = ["pan", "shoulder", "elbow", "wrist_flex", "wrist_roll", "gripper"]
+JAW = JOINTS.index("gripper")
 
 # Change these to whatever feels right to drive: joint -> (key for +, key for -).
 KEYMAP = {
@@ -26,25 +27,64 @@ KEYMAP = {
     "gripper": (glfw.KEY_O, glfw.KEY_L),
 }
 JOG_SPEED = np.radians(45)     # deg/s while a key is held; the servo's no-load limit is 270 deg/s
-LOAD_WARNING = 2.94 / 3        # N*m: the continuous limit used in calcs/
+STALL = 2.94                   # N*m
+CONTINUOUS = STALL / 3         # N*m: rule of thumb from calcs/ for sustained load, not a hard limit
 
 
-def jog(ctrl, pressed, dt, low, high):
-    """Move each joint's target by the keys held this frame, keeping it inside the joint limits.
+def prepare(m):
+    """Set the jaw's squeeze and return how far a target may lead its joint."""
+    m.actuator_forcerange[JAW] = (-CONTINUOUS, CONTINUOUS)  # like the servo's torque-limit setting
+    # Enough lead to reach stall torque while moving at jog speed, and no more.
+    return (STALL + m.actuator_biasprm[:6, 2] * -JOG_SPEED) / m.actuator_gainprm[:6, 0]
 
-    pressed maps a joint name to +1, -1 or 0. Targets move, not torques: like the real
-    servo, the arm then chases the target as far as its torque allows.
+
+def step_arm(m, d, pressed, seconds, lead, jaw_state):
+    """Advance the simulation, moving each joint's target by the keys held.
+
+    Targets move a little every physics step: stepping them once per drawn frame would make the
+    stiff servos slam into stall every frame. An arm target stays within `lead` of its joint, so a
+    blocked arm doesn't wind its target far away and then ignore the keys until the target comes back.
+
+    The jaw works differently, like a servo with a torque limit and a goal past the object: after you
+    close it onto something it keeps closing, so the squeeze survives the block shifting. jaw_state
+    remembers that you asked it to close, since a jaw pushed open by the table feels the same as a
+    squeeze. Opening starts from where the jaw actually is, so it responds at once.
     """
-    out = ctrl.copy()
-    for i, joint in enumerate(JOINTS):
-        out[i] = np.clip(out[i] + pressed.get(joint, 0) * JOG_SPEED * dt, low[i], high[i])
-    return out
+    step = JOG_SPEED * m.opt.timestep
+    rate = np.array([pressed.get(j, 0) for j in JOINTS]) * step
+    low, high = m.actuator_ctrlrange[:6, 0], m.actuator_ctrlrange[:6, 1]
+    arm = np.arange(6) != JAW
+    jaw_key = pressed.get("gripper", 0)
+    if jaw_key:
+        jaw_state["closing"] = jaw_key < 0
+    for _ in range(int(round(seconds / m.opt.timestep))):
+        target = d.ctrl[:6] + rate
+        target[arm] = np.clip(target[arm], d.qpos[:6][arm] - lead[arm], d.qpos[:6][arm] + lead[arm])
+        if jaw_key > 0:
+            target[JAW] = max(d.ctrl[JAW], d.qpos[JAW]) + step
+        elif jaw_key == 0 and jaw_state["closing"] and d.actuator_force[JAW] <= -0.9 * CONTINUOUS:
+            target[JAW] = d.ctrl[JAW] - step
+        d.ctrl[:6] = np.clip(target, low, high)
+        mujoco.mj_step(m, d)
+
+
+def joint_load(m, d):
+    """Torque the motor is producing. The joint damping stands in for the motor's own speed
+    limit, so it's taken off: it isn't load on the servo."""
+    return np.abs(d.actuator_force[:6] - m.dof_damping[:6] * d.qvel[:6])
+
+
+def load_flag(i, load):
+    if i == JAW:
+        return ""                         # the jaw is deliberately held at its torque limit
+    if load >= 0.95 * STALL:
+        return "   AT STALL: blocked or overloaded"
+    return "   above 1/3 stall" if load > CONTINUOUS else ""
 
 
 def status_text(d, load):
-    """Two overlay columns. load is the smoothed torque: the limit is about sustained load, not brief peaks."""
-    values = [f"{np.degrees(d.qpos[i]):.1f} deg   {load[i]:.2f} N*m{'   OVER LIMIT' if load[i] > LOAD_WARNING else ''}"
-              for i in range(len(JOINTS))]
+    """Two overlay columns. load is smoothed: the 1/3 rule is about sustained load, not brief peaks."""
+    values = [f"{np.degrees(d.qpos[i]):.1f} deg   {load[i]:.2f} N*m{load_flag(i, load[i])}" for i in range(len(JOINTS))]
     tip = d.site("tip").xpos * 1000
     return "\n".join(JOINTS + ["tip (mm)"]), "\n".join(values + [f"x {tip[0]:.0f}   y {tip[1]:.0f}   z {tip[2]:.0f}"])
 
@@ -63,9 +103,12 @@ def main():
     d = mujoco.MjData(m)
     home = m.key("ready").id
 
+    jaw_state = dict(closing=False)
+
     def reset():
         mujoco.mj_resetDataKeyframe(m, d, home)
         mujoco.mj_forward(m, d)
+        jaw_state["closing"] = False
 
     reset()
 
@@ -104,10 +147,7 @@ def main():
     glfw.set_scroll_callback(window, on_scroll)
     glfw.set_key_callback(window, on_key)
 
-    low, high = m.actuator_ctrlrange[:6, 0], m.actuator_ctrlrange[:6, 1]
-    jaw = JOINTS.index("gripper")
-    m.actuator_forcerange[jaw] = (-LOAD_WARNING, LOAD_WARNING)  # squeeze at the continuous limit, don't crush
-    jaw_windup = LOAD_WARNING / m.actuator_gainprm[jaw, 0]
+    lead = prepare(m)
     load = np.zeros(6)
     last = glfw.get_time()
     while not glfw.window_should_close(window):
@@ -117,12 +157,8 @@ def main():
 
         pressed = {j: (glfw.get_key(window, a) == glfw.PRESS) - (glfw.get_key(window, b) == glfw.PRESS)
                    for j, (a, b) in KEYMAP.items()}
-        d.ctrl[:6] = jog(d.ctrl[:6], pressed, frame, low, high)
-        # Holding "close" on a block must not wind the target far past it, or opening would lag.
-        d.ctrl[jaw] = max(d.ctrl[jaw], d.qpos[jaw] - jaw_windup)
-        for _ in range(int(frame / m.opt.timestep)):
-            mujoco.mj_step(m, d)
-        load += (np.abs(d.actuator_force[:6]) - load) * min(1.0, frame / 1.0)  # about a 1 s average
+        step_arm(m, d, pressed, frame, lead, jaw_state)
+        load += (joint_load(m, d) - load) * min(1.0, frame / 1.0)  # about a 1 s average
 
         width, height = glfw.get_framebuffer_size(window)
         view = mujoco.MjrRect(0, 0, width, height)
