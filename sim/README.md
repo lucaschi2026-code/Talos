@@ -6,11 +6,22 @@ A MuJoCo model of the Talos arm, built from the CAD in [`../cad`](../cad). Use i
 
 ## Run it
 
-Set up once, with Python 3.12:
+On Windows, double-click `sim\run.bat`, or run it from a terminal:
+
+```bat
+sim\run.bat                       :: drive the arm
+sim\run.bat drive.py --pick       :: with a 200 g block to pick up
+sim\run.bat check_model.py --fast
+sim\run.bat build_model.py
+```
+
+The first run sets up Python 3.12 and the packages in `%USERPROFILE%\.venvs\talos-sim`, which needs [uv](https://docs.astral.sh/uv/) (`winget install astral-sh.uv`). Set `TALOS_SIM_VENV` to use another folder. It runs the base Python with the environment's packages, because Smart App Control can block the environment's own `python.exe`.
+
+On macOS or Linux, set up once, with Python 3.12:
 
 ```bash
-uv venv --python 3.12 C:\Users\<you>\.venvs\talos-sim
-uv pip install --python C:\Users\<you>\.venvs\talos-sim\Scripts\python.exe -r sim/requirements.txt
+uv venv --python 3.12 ~/.venvs/talos-sim
+uv pip install --python ~/.venvs/talos-sim -r sim/requirements.txt
 ```
 
 Keep the environment outside OneDrive, because it holds thousands of files. Then, from the repo root, with that environment's Python:
@@ -37,7 +48,13 @@ Hold a key to move a joint. Left drag orbits the view, right drag pans and scrol
 | Gripper (+ opens) | O | L |
 | Back to the ready pose | R | |
 
-The readout shows each joint's angle and its torque averaged over about 1 s. `OVER LIMIT` means that average is above 1/3 of stall, the continuous limit used in [`../calcs`](../calcs).
+With `--pick`, the block sits to the arm's left, square to the gripper at 90° of pan. Hold A for about 2 s to face it.
+
+To pick it up, open the jaw (O), line the fixed finger up just inside the block, and lower until the tip is about 5–10 mm above the table (`z` in the readout). Hold L until the jaw is squeezing, and it keeps squeezing after you let go. Press O to release. Don't press down into the table first: the jaw then grips at a steeper angle, and the block can squeeze out when you lift.
+
+The readout shows each joint's angle and its motor torque averaged over about 1 s:
+- **`above 1/3 stall`:** more than the sustained-load rule of thumb used in [`../calcs`](../calcs). It's a warning about heat if held for a long time, and nothing stops the arm.
+- **`AT STALL`:** the servo has no torque left, usually because the arm is pressing on the table or the block.
 
 ## Where the numbers come from
 
