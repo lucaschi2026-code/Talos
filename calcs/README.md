@@ -12,7 +12,7 @@ Four scripts check the arm:
 
 | Check | Result | Status |
 | --- | --- | --- |
-| Moving mass | 524 g above the base, 739 g total | |
+| Moving mass | 522 g above the base, 737 g total | |
 | Shoulder holding, arm straight, 200 g | 1.73 N·m = 59 % of stall, 1.8× the 1/3 limit | ❌ over (first calc: 1.62) |
 | Elbow holding, arm straight, 200 g | 1.06 N·m, 1.08× the limit | ⚠️ just over (first calc: 0.96) |
 | Wrist flex / roll | 0.43 / 0.004 N·m | ✅ |
@@ -27,7 +27,7 @@ Four scripts check the arm:
 | Grip force | 23 N continuous at mid-jaw, so 200 g needs only 3.3 N | ✅ |
 | Fixed finger root (20 mm wide) | 1.8 MPa continuous, 5.5 MPa at jaw stall (SF 1.8) | ✅ |
 | Jaw opening | 115°, about 67 mm between the tips | ✅ |
-| Joint ranges (CAD collision sweep) | Shoulder ±100°, elbow ±105°, wrist −105/+95° | ✅ |
+| Joint ranges (CAD collision sweep) | Shoulder ±100°, elbow ±100°, wrist −100/+95° | ✅ |
 
 ### Weight reduction
 
@@ -54,6 +54,8 @@ The flat-first-layer revision made every part sit on one solid footprint: the ar
 
 The dimension-check revision fixed what measuring every print mesh turned up. The shoulder's cheeks now fuse to the cradle walls, closing a 0.5 mm slit. The output clevis plates gained a Ø19 × 0.2 pad on the horn face, and the wrist's idler pad was restored. 0.4 mm doublers now sit over the back-pad channels, and thin webs and slivers around the counterbores, plug bays and base flutes were removed (see `../cad/README.md`, Dimension checks). Moving mass 524 g (−1 g: filling the slit removed two internal wall surfaces from the shoulder). Torques, joint ranges and beam stresses are unchanged.
 
+The real-servo revision rebuilt every servo pocket from Feetech's CAD of the STS3215 (the model in SO-101's assembly), with 0.4 mm of printing clearance all round. The first printed parts didn't take the servos: the old servo model was up to 0.85 mm too small on the connector side and over the top-face rib. See `../cad/README.md`, The servo. Moving mass 522 g (−2 g: bigger pockets). The servo plugs are now modelled a little larger, so the elbow and wrist flex sweeps stop at −100° rather than −105°. Torques and beam stresses are unchanged to within 0.01 N·m. `pan_base_check.m` and `torque_check.m` still carry the 524 g masses; the 2 g difference moves their results by under 1 %.
+
 The base was left alone on purpose. It's fixed, so it adds no joint torque, and its weight works against tipping.
 
 The gains are modest because 69 % of the moving mass is servos (6 × 61 g). The printed parts are already mostly 20 % infill, so their weight is in the outer skin. Cutting more plastic would cost stiffness for little torque.
@@ -71,12 +73,12 @@ SO-101 numbers come from its own URDF via [`so101_compare.py`](so101_compare.py)
 | Shoulder axis offset from pan axis | 30.4 mm forward | 0 (centred) |
 | Tool point from shoulder axis | 410 mm | 402 mm (420 to the jaw tip) |
 | Tool point from pan axis, reaching forward | 441 mm | 402 mm |
-| Moving mass | 485 g | 524 g (494 g without the 30 g screws and cable allowance the URDF leaves out) |
+| Moving mass | 485 g | 522 g (492 g without the 30 g screws and cable allowance the URDF leaves out) |
 | Shoulder, straight out, 200 g | 1.67 N·m | 1.73 N·m |
 | Elbow, straight out, 200 g | 1.03 N·m | 1.06 N·m |
 | Wrist flex, straight out, 200 g | 0.43 N·m | 0.43 N·m |
 | Pan shaft, straight out, 200 g | 1.87 N·m | 1.73 N·m |
-| Joint limits (shoulder / elbow / wrist flex) | ±100° / ±97° / ±95° | ±100° / ±105° / −105°…+95° (CAD collision sweep) |
+| Joint limits (shoulder / elbow / wrist flex) | ±100° / ±97° / ±95° | ±100° / ±100° / −100°…+95° (CAD collision sweep) |
 | Gripper range | −10°…100° | 0°…115° |
 
 The two arms load their servos almost identically: within 4 % at every pitch joint, and 7 % lower at the pan shaft on Talos.
