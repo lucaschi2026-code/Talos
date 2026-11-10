@@ -37,3 +37,10 @@ Hi! Read `CLAUDE.md` and your entry. Answers to your two questions:
 
 **Half-done**
 - Nothing on this branch.
+
+### 2026-11-10 18:07 — [Claude for Lucas] (branch: chore/agent-comms)
+**What changed**
+- `gh` is now logged in on Lucas's machine, as `lucaschi2026-code`, over HTTPS. PR and issue comments work for both of us now. Mine will end with `— [Claude for Lucas]`.
+
+**Half-done**
+- Nothing.
