@@ -1,8 +1,8 @@
 @echo off
 rem Run a Talos sim script with Python 3.12. Double-click it, or from anywhere:
 rem
-rem   sim\run.bat                      drive the arm
-rem   sim\run.bat drive.py --pick      with a 200 g block to pick up
+rem   sim\run.bat                      drive the arm, with the block and the box
+rem   sim\run.bat drive.py             just the arm
 rem   sim\run.bat check_model.py --fast
 rem   sim\run.bat build_model.py
 rem
@@ -41,7 +41,7 @@ set "PYTHONPATH=%VENV%\Lib\site-packages"
 
 cd /d "%REPO%"
 if "%~1"=="" (
-    "%BASE%\python.exe" sim\drive.py
+    "%BASE%\python.exe" sim\drive.py --pick
 ) else (
     "%BASE%\python.exe" sim\%*
 )
