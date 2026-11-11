@@ -17,6 +17,8 @@ import talos_arm as ta
 
 REV = "A"
 OUT = Path(__file__).with_name("print")
+BED = (220.0, 220.0, 240.0)  # Creality Ender 3 V3 KE build volume, mm
+MARGIN = 5.0                 # kept clear of the bed edge on every side (skirt or brim)
 
 CONTENT_TYPES = """<?xml version="1.0" encoding="UTF-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -102,6 +104,9 @@ def main():
         gate = {"closed mesh": open_edges == 0 and nonmanifold == 0,
                 "mesh volume = solid": abs(vol - s.Volume()) < 5e-3 * s.Volume(),
                 "on the bed": abs(V[:, 2].min()) < 1e-3,
+                f"fits the {BED[0]:.0f} x {BED[1]:.0f} x {BED[2]:.0f} bed": (
+                    max(bb.xlen, bb.ylen) <= max(BED[:2]) - 2 * MARGIN
+                    and min(bb.xlen, bb.ylen) <= min(BED[:2]) - 2 * MARGIN and bb.zlen <= BED[2]),
                 "first layer: no specks or slivers (every island 5 mm2 or more)": min(islands) >= 5.0,
                 f"{n_ok}/{len(pc.PROBES[part_no])} dimensions": not fails}
         bad = [k for k, ok in gate.items() if not ok]

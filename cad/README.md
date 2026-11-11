@@ -57,7 +57,7 @@ The parts are split into two sets so two people can model them at the same time.
 | Set | File | Parts | Steps |
 | --- | --- | --- | --- |
 | A | [`TAL-SET-A_base-to-upper-arm_rev-A.pdf`](drawings/work-sets/TAL-SET-A_base-to-upper-arm_rev-A.pdf) | TAL-101 base, TAL-102 shoulder, TAL-103 upper arm, TAL-108 hub cap, TAL-111 fit gauge | 45 |
-| B | [`TAL-SET-B_forearm-to-gripper_rev-A.pdf`](drawings/work-sets/TAL-SET-B_forearm-to-gripper_rev-A.pdf) | TAL-104 forearm, TAL-105 wrist, TAL-106 gripper body, TAL-107 moving jaw, TAL-110 idler plate | 48 |
+| B | [`TAL-SET-B_forearm-to-gripper_rev-A.pdf`](drawings/work-sets/TAL-SET-B_forearm-to-gripper_rev-A.pdf) | TAL-104 forearm, TAL-105 wrist, TAL-106 gripper body, TAL-107 moving jaw, TAL-110 idler plate | 47 |
 
 - **Shared sheets:** both sets start with TAL-000, TAL-001 and TAL-002. Each person models servo pocket P and the common features from those, so both sides of every joint use the same geometry.
 - **Where the sets meet:** only at the elbow. The upper arm's end shell (set A) holds the elbow servo, and the forearm's clevis (set B) clamps its horns. Both are defined on TAL-001 and TAL-002, so check them against each other before printing. The idler plate (TAL-110, set B) also screws onto the upper arm (set A): its pocket and screw holes are on TAL-103.
@@ -119,23 +119,31 @@ The first printed Talos parts didn't take the servos. The servo model they were 
 
 | Feature (from the servo's mid-plane) | Old model | Real servo | Change |
 | --- | --- | --- | --- |
-| Top face (output side) | flat cap at 15.9 | 15.5, with a raised rib 14 wide up to 16.45 | +0.55 over the rib |
+| Top face (output side) | flat cap at 15.9 | 15.5, with a raised rib 14 wide up to 16.45 (four small pips on it reach 16.6) | +0.55 over the rib, +0.7 at the pips |
 | Bottom face (connector side) | 15.9 | 16.5 | +0.6 |
-| Bump beside the connectors | 1.8 deep, to 17.7, x −29.9 to −19.9 | to 18.25, x −29.7 to −17.7 | +0.55 deeper, 2.2 longer |
+| Bump beside the connectors | 1.8 deep, to 17.7, x −29.9 to −19.9 | to 18.25 in the middle and 18.4 at its rim, x −29.7 to −17.7 | +0.7 deeper at the rim, 2.2 longer |
 | Passive horn face | 17.7 | 18.55 | +0.85 |
 | Idler boss tip | 18.3 | 19.1 | +0.8 |
 | Bare output spline (horn off) | 16.2 | 17.2 | +1.0 |
 | Horns | Ø20, holes on a 13.86 circle | Ø19.2, holes on a 14 circle | |
+| Case screw holes, bottom face | (−33, ±10.3) | (−32.75, ±10.25), Ø1.6 | 0.25 nearer the shaft |
+| Case screw holes, top face | (−29, ±10.3) | (−29, ±10.25), Ø1.6 | |
 
 On top of that the pockets had only 0.3 mm of clearance, too little for FDM, and the arm links had no channel for the rib on the way in.
 
 The sizes now come from Feetech's own CAD of the servo, the model inside SO-101's assembly STEP. It is in [`reference/so101/step/STS3215_from_SO101.step`](reference/so101/step/STS3215_from_SO101.step), together with SO-101's printed parts. [`servo_reference.py`](servo_reference.py) measures it, compares each size with the constants in `talos_arm.py`, and then puts the real servo into every Talos part:
 
+- **Sizes:** every case size, the four M2 mounting holes each part uses and the horns' M3 hole circle are measured on the Feetech model. A model size may be up to 0.3 mm bigger than the real one where that only adds room, never smaller. Hole positions and horn faces must match to 0.05 mm.
 - **In its pocket:** no part touches the case. There is 0.35 to 0.4 mm of room on every side; each servo is located by its case screws, not by a press fit.
-- **On its way in:** the case slides out along its entry path for 60 mm without touching, with both horns off. The base and wrist servos also go in with their horns on.
-- **Horns:** both horns clear the shell they turn in.
+- **On its way in:** the case slides out along its entry path for 60 mm without touching, with both horns off. The base and wrist servos also go in with their horns on. `part_checks.py` repeats this with both bus plugs fitted.
+- **Horns:** both horns clear the shell they turn in. Where the servo goes in with its horns off, each horn also passes out through its opening, so it can be refitted.
+- **Horn screws:** an M3 × 6 puts 1.8 mm of thread in the output horn and 1.65 mm in the passive horn, and stops 2.9 and 1.9 mm short of the servo case behind them.
+
+Each case also has a second pair of holes in its bottom face beside the shaft, at (−8.3, ±10.25). Only the base uses it, so the pan servo is held at both ends (see [Screws](#screws)).
 
 **Printing tolerance.** FDM prints come out slightly small on the inside, so every pocket is the servo plus 0.4 mm all round (`FIT_C`). The rib, bump, spline and idler boss channels are 0.5 mm off them (`PASS_C`). The horn openings are R10.8, which leaves 1.2 mm round the Ø19.2 horns. M3 clearance holes are Ø3.4. The TAL-110 idler plate's pocket is 0.3 mm bigger all round than the plate, because both parts are printed.
+
+**What the clearance costs.** With 0.4 mm of room, nothing but the case screws holds a servo still. The two faces the screws pull on are also 0.4 mm off their walls, so the screws close that gap by bending the wall, or bridge it. Tighten the top-face screws (output side) first, then the bottom-face ones, and check them again after the first hour of running. If the fit gauge shows your printer holds size well, the clearance on those two faces is the first thing to take down in the next revision.
 
 ## Wiring
 
@@ -143,7 +151,7 @@ The six servos are daisy-chained on one bus from the board in the base. Each STS
 
 | Hop | Route |
 | --- | --- |
-| Board → pan servo | The board sits on a deck behind the column, on four M3 standoffs (37 × 28 mm pattern, same Waveshare bus servo adapter as SO-101). A 12 × 9.7 mm tunnel runs from the deck into the pan servo's plug bay under the servo. |
+| Board → pan servo | The board sits on a deck behind the column, on four standoffs for M2.5 screws (37 × 28 mm pattern, same Waveshare bus servo adapter as SO-101). A 12 × 9.7 mm tunnel runs from the deck into the pan servo's plug bay under the servo. |
 | Pan → shoulder | Back out through the same tunnel, then a service loop up the back of the column to a clip on the shoulder cradle's back face, and on to the shoulder servo's plugs on the cradle's −Y side. The loop sets the pan range: keep it to about ±110° in software, like SO-101. |
 | Shoulder → elbow | Across the shoulder joint on the −Y side, outside the slim idler plate, through the clip on the upper arm's waist, and into the plug window in the elbow shell. |
 | Elbow → wrist flex | Same pattern along the forearm. |
@@ -162,7 +170,20 @@ Like SO-101, each servo slots into its printed part and screws in from outside, 
 4. **Plug in a 3-pin cable** before placing each servo; the plug bays are easier to reach then.
 5. **Push the servo in** along its entry path (table below) and fit its M2 case screws.
 6. **Refit both horns** through the R10.8 openings in the shell walls: the output horn on its spline with its centre screw, the passive horn on its boss with its centre screw.
-7. **Fit the next link:** 4× M3 × 6 into the output horn, then 4× M3 × 5 through the idler plate into the passive horn (and, on the arm links, the idler plate's 2× M3 × 10 into the beam). Use M3 × 5 on the passive horn: its disc is only 1.95 mm thick and an M3 × 6 would reach the servo case behind it.
+7. **Fit the next link:** 4× M3 × 6 into the output horn, then 4× M3 × 6 through the idler plate into the passive horn (and, on the arm links, the idler plate's 2× M3 × 10 into the beam). The arm links go onto the output horn from the +Y side and the idler plate closes the −Y side. The wrist's clevis is one piece: spring its plates over the two horns.
+8. **Hub caps last:** glue or tape them over the output-side screw heads.
+
+### Build order
+
+Some screws are covered by the next servo, so the order matters:
+
+1. **Base:** pan servo into the column, 4× M2 × 6 from under the base.
+2. **Shoulder onto the pan horn** with 4× M3 × 6 from inside the empty cradle, straight down from above. Do this before the shoulder servo goes in: it sits over those screws.
+3. **Shoulder servo** into the cradle, case screws through the cheeks, horns back on.
+4. **Upper arm, elbow servo, forearm, wrist flex servo**, in that order, each as in the steps above.
+5. **Wrist roll servo** into the wrist cradle and its 2× M2 × 5 through the back wall, from the clevis side. Then the wrist onto the forearm.
+6. **Gripper body onto the roll horn** with 4× M3 × 6 from inside the empty housing. A straight driver doesn't reach: use the short leg of a 2 mm hex key, with its long leg up through the open top. The lower two screws lie in grooves in the housing floor. Do this before the jaw servo goes in.
+7. **Jaw servo** into the housing, case screws, output horn back on, then the moving jaw.
 
 ### Entry paths
 
@@ -170,7 +191,7 @@ Each servo goes into its printed part along a path that its case, top-face rib, 
 
 | Part | Servo | Goes in |
 | --- | --- | --- |
-| TAL-101 base | pan | From above, connector end first. Horns can stay on |
+| TAL-101 base | pan | From above, connector end first. Horns can stay on. Feed the cable up through the tunnel first and plug it in before lowering the servo |
 | TAL-102 shoulder | shoulder | From the top, far end first, horns off. The +Y cradle wall has a channel for the rib; the −Y wall a channel for the bump and a slot for the plugs and idler boss |
 | TAL-103 upper arm | elbow | From below, shaft to +Y, horns off. The floor is open under the whole servo. The +Y wall has channels for the rib and the spline; the −Y wall a channel for the bump and a notch joining the plug window to the idler hole |
 | TAL-104 forearm | wrist flex | From below, the same as the upper arm |
@@ -185,18 +206,20 @@ All holes and counterbores are in the parts, and the screws are modelled in the 
 
 | Where | Screw | Qty | Notes |
 | --- | --- | --- | --- |
-| Output horns: turntable, upper arm, forearm, wrist, gripper, moving jaw | M3 × 6 button head | 24 | 4 per horn on a 14 mm circle (9.9 mm square), plus a Ø7 centre hole for the horn's own centre screw. The turntable's go in from inside the cradle and the gripper's from inside the housing, both counterbored. |
-| Passive horns: upper arm, forearm, wrist | M3 × 5 button head | 12 | 4 per horn through the idler plate, heads sunk 0.8 mm. Not M3 × 6: the tip would reach the servo case behind the 1.95 mm horn. The plate's Ø19 pad bears on the horn, and its Ø7 centre hole clears the idler boss |
+| Output horns: turntable, upper arm, forearm, wrist, gripper, moving jaw | M3 × 6 button head | 24 | 4 per horn on a 14 mm circle (9.9 mm square), plus a Ø7 centre hole for the horn's own centre screw. The turntable's go in from inside the cradle and the gripper's from inside the housing, both counterbored (see [Build order](#build-order)). 1.8 mm of thread in the horn |
+| Passive horns: upper arm, forearm, wrist | M3 × 6 button head | 12 | 4 per horn through the idler plate, heads on its outer face. 1.65 mm of thread in the horn (2.2 mm thick at its holes); the tip stops 1.9 mm short of the servo case. The plate's Ø19 pad bears on the horn, and its Ø7 centre hole clears the idler boss |
 | Idler plates to the arm links | M3 × 10 button head | 4 | 2 per plate, into Ø2.5 pilots 8 deep in the beam |
 | Servo cases: elbow, wrist flex, jaw, top face | M2 × 6 self-tapping | 6 | 2 per servo. They seat 1.0 mm over the rib's channel, so the heads stand 0.7 mm proud of the shell (out of reach of the next link) |
-| Servo cases: elbow, wrist flex, jaw, bottom face | M2 × 4 self-tapping | 6 | 2 per servo, 1.0 mm of wall under the head |
+| Servo cases: elbow, wrist flex, jaw, bottom face | M2 × 5 self-tapping | 6 | 2 per servo, 1.0 mm of wall under the head. The heads stand 0.5 mm proud |
 | Servo case: shoulder | M2 × 6 top face, M2 × 5 bottom face | 2 + 2 | Through counterbores in the cradle cheeks |
-| Servo case: pan | M2 × 5 self-tapping | 2 | From under the base, through Ø4.2 tunnels |
-| Servo case: wrist roll | M2 × 5 self-tapping | 2 | Through the cradle back wall; fit before the gripper |
+| Servo case: pan | M2 × 6 self-tapping | 4 | From under the base, through Ø4.2 tunnels 23.7 deep: two at the far end of the servo and two beside the shaft. Use a driver with a shaft under 4 mm |
+| Servo case: wrist roll | M2 × 5 self-tapping | 2 | Through the cradle back wall, from the clevis side |
 | Bus board | M2.5 × 6 self-tapping | 4 | Through the board's Ø2.5 holes into Ø2.1 pilots in the standoffs |
 | Base to table | M4, user's choice | 4 | Counterbored holes in the plinth; the arm tips over unless these (or a clamp) are used |
 
-The hub caps press onto the output-side clevis plates over the screw heads. Each has a 1.8 mm recess, which clears the M3 button heads (1.65 mm). The idler side has no cap: one wide enough for its four screws would hit the parent servo's plugs.
+That is 36 M3 × 6, 4 M3 × 10, 12 M2 × 6, 10 M2 × 5 and 4 M2.5 × 6. Every M2 case screw reaches 2.9 to 3.6 mm into the servo case. SO-101's M2 × 6 reach 3.8 mm through its 2.2 mm walls, so the holes take that depth.
+
+The hub caps sit on the output-side clevis plates over the screw heads. Each has a 1.8 mm recess, which clears the M3 button heads (1.65 mm). The recess is 0.55 mm bigger than the ring of heads all round, so the caps don't grip anything: fix them with a drop of glue or double-sided tape. The idler side has no cap: one wide enough for its four screws would hit the parent servo's plugs.
 
 The design language is original rather than a copy of the SO-101 parts. It uses:
 - a 12-sided plinth with a fluted column
@@ -214,13 +237,15 @@ Talos follows SO-101's printing rules:
 - **Print-ready files.** [`print/`](print) has one 3MF per printed part, already turned onto its print face and sitting on z = 0. 3MF carries millimetres, so nothing imports at the wrong scale.
 - **Settings:** PLA or PLA+, 0.4 mm nozzle, 0.2 mm layers, 3 perimeters and 20 % infill (what the calcs assume). The upper arm's elbow housing is the arm's lowest bending margin: print that part's walls solid (6 perimeters) if you can.
 - **Supports:** on, but ignore slopes steeper than 45° and block them in horizontal screw holes. Drill those holes to size afterwards (3.4 mm for M3, 2.4 mm for M2 clearance). Bridges print unsupported.
+- **Elephant's foot:** turn on the slicer's elephant-foot compensation (0.1 to 0.2 mm). The upper arm and forearm take their servo through the bed face, and the idler plates drop into a 0.3 mm pocket, so a flared first layer eats the clearance exactly where the parts go together.
+- **Keep the orientation in the file.** The gripper body stands 108 mm tall with its 20 mm fingers across the bed's Y travel (the stiff way). Don't turn it about Z on a bed-slinger such as the Ender 3 V3 KE.
 - **Fit gauge first:** TAL-111, as above.
 
-Each part's orientation was chosen by measuring its overhang in all six orientations. Every part sits flat on a solid first layer, checked by slicing each part 0.2 mm above the bed. Each first layer is one connected piece, except on TAL-110 (see its row), and has no specks or slivers:
+Each part's orientation was chosen by measuring its overhang in all six orientations. Every part sits flat on a solid first layer, checked by slicing each part 0.2 mm above the bed. Each first layer is one connected piece and has no specks or slivers:
 
 | Part | On the bed | First layer | Support |
 | --- | --- | --- | --- |
-| TAL-101 Base | Plinth down | 15286 mm² | No support |
+| TAL-101 Base | Plinth down | 15258 mm² | No support |
 | TAL-102 Shoulder | Turntable down | 3612 mm² | No support |
 | TAL-103 Upper arm | Flat underside down | 2595 mm² | No support (servo-opening roof and window tops bridge) |
 | TAL-104 Forearm | Flat underside down | 3230 mm² | No support (servo-opening roof and window tops bridge) |
@@ -228,7 +253,7 @@ Each part's orientation was chosen by measuring its overhang in all six orientat
 | TAL-106 Gripper body | Standing on the roll-horn disc | 1027 mm² | No support (one 32 mm bridge at the front of the servo opening); use a brim, the part is 108 tall |
 | TAL-107 Moving jaw | Horn plate down | 882 mm² | Support under the finger |
 | TAL-108 Hub cap ×3 | Outer face down | 437 mm² | No support |
-| TAL-110 Idler plate ×2 | Outer face down | 562 mm² | No support. The screw counterbores are on the bed face, so the first layer is two solid pieces (527 + 36 mm²). The small one is the lobe between the back two counterbores, joined to the plate 0.8 mm up. The hub can't grow to join them on the bed, because it has to clear the parent servo's plugs |
+| TAL-110 Idler plate ×2 | Outer face down | 683 mm² | No support. The screw heads sit on the outer face, so the bed face is one solid layer with plain holes |
 | TAL-111 Servo fit gauge | Flat | 1146 mm² | No support. Print it first, with the same settings as the arm |
 
 ## Dimension checks
@@ -236,13 +261,15 @@ Each part's orientation was chosen by measuring its overhang in all six orientat
 Each 3MF is written only after its part passes `part_checks.py`, which measures the print mesh itself. The mesh is already turned onto its print face, so the check covers the file the slicer gets, not just the model. Each probe casts rays at a feature the design calls for, written from the design constants and the STS3215 sizes:
 
 - **Holes:** every horn screw, centre, case screw, counterbore, pilot and mounting hole, sized and located to ±0.03 mm. Every ray from the hole's axis must land on the design radius.
+- **Tool access:** from every case screw head, the screw's axis and a ring of lines round it (the head and a 3.5 mm driver shaft) run clear out of the part. The same for the pan horn screws inside the shoulder cradle, and for each horn through its opening in the shell. The gripper's roll horn screws are checked for the short leg of a hex key along the axis and its long leg up through the open top.
 - **Joint geometry:** the pivot spacing L (the servo's R10.8 horn opening centred L from the clevis axis), plate thicknesses and inner faces, and the horn pads on the horn faces.
 - **Servo pockets:** every wall 0.4 mm off the servo's faces, the rib and bump channels 0.5 mm off them, and the way in clear for 80 mm. `servo_reference.py` also checks every pocket against the Feetech model itself (see [The servo](#the-servo)).
 - **Envelope:** heights, widths, the flat underside, the finger tip and width, the fit gauge windows, and the idler plate pocket.
 - **Mesh:** closed with no open or non-manifold edges, its volume equal to the solid's, and its lowest point on z = 0.
+- **Bed:** the part fits the Ender 3 V3 KE's 220 × 220 × 240 mm build volume with 5 mm to spare on every side.
 - **First layer:** no first-layer island smaller than 5 mm².
-- **Fits, on the solids:** each bare servo sits in its pocket without touching and slides out along its way in. Each TAL-110 idler plate drops into its pocket.
-- **Joint travel** (`joint_sweep.py`): the shoulder and elbow turn ±100° and the wrist flex −100° to +95° before anything touches, servo plugs and screw heads included. At ±105° the idler plate reaches the servo plugs, or one link reaches the next. Set the software limits inside these.
+- **Fits, on the solids:** each bare servo sits in its pocket without touching and slides out along its way in, and so do its two bus plugs. Each TAL-110 idler plate drops into its pocket.
+- **Joint travel** (`joint_sweep.py`): the shoulder and elbow turn ±100° and the wrist flex −100° to +95° before anything touches, servo plugs and screw heads included. At ±105° the idler plate reaches the servo plugs, or one link reaches the next. Set the software limits inside these. The wrist flex range is the same with the gripper rolled 90° or 180° or the jaw open, and the wrist roll turns a full ±180° without touching (its cable is the limit).
 
 This check found and fixed three defects:
 
@@ -253,8 +280,9 @@ This check found and fixed three defects:
 A wall-thickness scan of every mesh (rays cast inward from each face) also found unprintable thin spots, now fixed:
 
 - **Thin walls** over the bump's channel in the upper arm, forearm, gripper and shoulder. The channel runs 0.6 mm past the shell wall, so a 1.4 mm doubler on the outside leaves 0.8 mm (two perimeters) over it. It is out of reach of the next link's idler plate (see `joint_sweep.py`).
-- **0.2 mm webs** between each M3 counterbore and the centre hole, on the shoulder, gripper and idler plates. The centre is opened to Ø8.6 over the counterbore depth.
-- **A 0.3 mm rim** outside the idler plate's back counterbores, on the first layer. Those counterbores now run out through the rim.
+- **0.2 mm webs** between each M3 counterbore and the centre hole, on the shoulder and gripper. The centre is opened to Ø8.6 over the counterbore depth.
+- **Webs and a 0.3 mm rim** round the idler plates' counterbores, on the first layer. The idler plates now have no counterbores: the M3 × 6 heads sit on the outer face.
+- **A 0.2 mm wall** between the base's two new case screw tunnels and the plug bay. The wall is cut away, so each tunnel opens into the bay.
 - **A knife edge** where each servo's plug bay meets its R10.8 idler opening. A small relief box blunts it.
 - **Thin edges** where two column flutes broke into the base's cable tunnel. Those two flutes now start above the tunnel.
 - **A 0.7 mm strip** where the moving jaw's grip notches ran into its horn plate. The notches now stop at the plate.
@@ -269,6 +297,9 @@ python talos_arm.py --pose zero   # -> talos_arm_zero.step
 python render.py                  # renders + interference report
 python part_checks.py            # dimension and fit report for every part (verbose)
 python print_files.py            # checks each part, then writes print/ (nothing written for a part that fails)
+python servo_reference.py        # the real STS3215 against the model and in every pocket (a few minutes)
+python joint_sweep.py            # joint travel before anything touches
+python drawings.py               # the drawing set
 ```
 
 Requires `cadquery` (2.8) and, for `render.py`, `vtk` and `numpy`, which install with CadQuery. Add poses to `POSES` in `talos_arm.py` to export other configurations.
@@ -279,4 +310,6 @@ Requires `cadquery` (2.8) and, for `render.py`, `vtk` and `numpy`, which install
 - The board is modelled as a bare 42 × 33 mm PCB with Ø2.5 holes on a 37 × 28 mm pattern. That matches Waveshare's spec for the Bus Servo Adapter (A) that SO-101 uses. Components aren't modelled, so check where the power and USB ports sit before relying on rear access.
 - Cables aren't modelled as solids, only their bays, tunnel and clips. Service loops at the pan and roll joints need slack: about 120 mm at the pan and 80 mm at the roll.
 - Parts are single solids, apart from the arm links' separate idler plates. The servo shells are 2.5 mm thick beside the top face (1.3 mm over the rib channel) and 1.5 mm beside the bottom face.
-- The passive horn is Feetech's: Ø19.2, a 1.95 mm disc with the output horn's 4-hole pattern. An M3 × 5 bites 1.45 mm into it.
+- The passive horn is Feetech's: Ø19.2, a 1.95 mm disc (2.2 mm at its holes) with the output horn's 4-hole pattern. An M3 × 6 bites 1.65 mm into it.
+- The depth of the case's M2 holes isn't known: Feetech's CAD draws them schematically. The screw lengths follow SO-101's practice (see [Screws](#screws)). Check one screw in a bare servo before fitting the rest.
+- The horn holes are drawn at 45° to the servo's long axis. The output horn can go on its spline at any of 25 positions, and the passive horn turns freely, so set the angle when you refit the horns.

@@ -8,21 +8,23 @@ Four scripts check the arm:
 
 ## Design review (CAD v1, lightweighted)
 
-**Verdict: the design holds up, with two loads to manage and one clamp to fit.** Everything structural has margin. The servos at the shoulder (and just barely the elbow) are the limit, as in the first calc.
+**Verdict: the design holds up, with two loads to manage and one clamp to fit.** The links and screws have margin. The lowest structural margin is in the shoulder cradle's posts (see below). The servos at the shoulder (and just barely the elbow) are the limit, as in the first calc.
 
 | Check | Result | Status |
 | --- | --- | --- |
-| Moving mass | 522 g above the base, 737 g total | |
+| Moving mass | 522 g above the base, 738 g total | |
 | Shoulder holding, arm straight, 200 g | 1.73 N·m = 59 % of stall, 1.8× the 1/3 limit | ❌ over (first calc: 1.62) |
 | Elbow holding, arm straight, 200 g | 1.06 N·m, 1.08× the limit | ⚠️ just over (first calc: 0.96) |
 | Wrist flex / roll | 0.43 / 0.004 N·m | ✅ |
 | 200 g payload, top-down picks | OK out to 195 mm from the base axis | ✅ typical work zone |
 | Dynamics, shoulder 90° in 1 s | +0.37 N·m peak, 72 % of stall total | ✅ transient |
 | Pan servo shaft | 1.73 N·m overturning moment (SO-101: 1.87 reaching forward), carried by the servo's own bearing | ✅ within SO-101's own load; measure play (see below) |
-| Base tipping | Tips over at full reach (1.13 N·m net) unless fixed down | ❌ clamp or bolt it |
-| Beam bending | Worst 6.2 MPa (upper arm at x 112, the elbow housing with its floor open for the servo), safety factor 1.6. Forearm: 2.7 MPa at its own housing (SF 3.8) | ⚠️ lowest margin on the arm, see below |
+| Pan servo mounting | 4 case screws, two at each end of the servo: worst 38 N on a screw, 7.4 MPa under its head. With the far pair alone the servo could rock in its pocket | ✅ |
+| Base tipping | Tips over at full reach (1.12 N·m net) unless fixed down | ❌ clamp or bolt it |
+| Beam bending | Worst 6.2 MPa (upper arm at x 112, the elbow housing with its floor open for the servo), safety factor 1.6. Forearm: 4.1 MPa at its own housing (SF 2.5) | ⚠️ low margin, see below |
+| Shoulder cradle posts | The shoulder servo's reaction torque bends one post across its layer lines: 4.4 MPa unloaded (SF 2.3), 8.2 MPa with 200 g straight out (SF 1.2), 13.9 MPa at stall | ⚠️ lowest margin on the arm, see below |
 | Tip sag from link bending | 2.3 mm | ✅ |
-| Horn screw bearing | M3: 5.3 MPa holding, 8.8 MPa at stall (SF 2.3) | ✅ |
+| Horn screw bearing | M3: 5.1 MPa holding, 8.8 MPa at stall (SF 2.3) | ✅ |
 | Idler plate screws (TAL-110) | 2 × M3 per plate: 0.5 MPa with the whole joint reaction doubled (SF 39) | ✅ |
 | Grip force | 23 N continuous at mid-jaw, so 200 g needs only 3.3 N | ✅ |
 | Fixed finger root (20 mm wide) | 1.8 MPa continuous, 5.5 MPa at jaw stall (SF 1.8) | ✅ |
@@ -46,7 +48,7 @@ The wiring and screw revision afterwards kept the moving mass at 529 g. It added
 
 The print revision then gave the upper arm and forearm a flat underside and made their idler plates a separate screwed-on part (TAL-110), so both links print without support. It added 3 g (upper arm +1.0 g, forearm +1.7 g, both including the plate): the moving mass was 532 g. Shoulder and elbow torques are unchanged at two decimals (1.75 and 1.07 N·m), because the added plastic sits near each link's own joint. The worst beam stress rose from 3.2 to 3.9 MPa (safety factor 3.1 → 2.6): the section next to the shoulder clevis is now the output plate alone, which is also how the load really flows, since the idler side can't carry bending.
 
-Opening the upper arm's housing floor so the elbow servo can be pushed in from below took off 2 g (moving mass 530 g), but it makes the housing an open U-section from x 106 to the elbow axis. The beam check now finds the arm's lowest margin there: 6.3 MPa at x 112, safety factor 1.6 against the 10 MPa sustained limit, arm straight out with 200 g. That figure counts only the printed shell. In reality the servo case, screwed to both walls, carries part of this load, and the bottom of the walls is in compression, so it is a conservative number, but it is the one to watch. The servo-entry revision then did the same for every servo pocket that had no way in: the forearm (from below, like the upper arm), the shoulder (from the top) and the gripper (from the top). That took 4 g more off: the moving mass is now 526 g, the shoulder 1.73 N·m and the elbow 1.06 N·m. The forearm's open housing has much more margin than the upper arm's (2.7 MPa, safety factor 3.8), because it carries only the wrist and gripper. The upper arm's x 112 section (6.2 MPa, safety factor 1.6) is the lowest margin on the arm; printing its housing walls solid (6 perimeters) should raise it to about 2.5 (hand estimate).
+Opening the upper arm's housing floor so the elbow servo can be pushed in from below took off 2 g (moving mass 530 g), but it makes the housing an open U-section from x 106 to the elbow axis. The beam check now finds the arm's lowest margin there: 6.3 MPa at x 112, safety factor 1.6 against the 10 MPa sustained limit, arm straight out with 200 g. That figure counts only the printed shell. In reality the servo case, screwed to both walls, carries part of this load, and the bottom of the walls is in compression, so it is a conservative number, but it is the one to watch. The servo-entry revision then did the same for every servo pocket that had no way in: the forearm (from below, like the upper arm), the shoulder (from the top) and the gripper (from the top). That took 4 g more off: the moving mass is now 526 g, the shoulder 1.73 N·m and the elbow 1.06 N·m. The forearm's open housing has more margin than the upper arm's (4.1 MPa, safety factor 2.5), because it carries only the wrist and gripper. The upper arm's x 112 section (6.2 MPa, safety factor 1.6) is the lowest margin on the arm; printing its housing walls solid (6 perimeters) should raise it to about 2.5 (hand estimate).
 
 The SO-101-style revision fixed the idler side of every clevis: the idler plates now screw into the servo's passive horn (4× M3, like the output side) instead of one screw into the idler boss, which doesn't turn. The small hub caps went, since a cap wide enough for those screws would hit the parent servo's plugs. Moving mass 523 g; torques, joint ranges and beam stresses unchanged.
 
@@ -55,6 +57,14 @@ The flat-first-layer revision made every part sit on one solid footprint: the ar
 The dimension-check revision fixed what measuring every print mesh turned up. The shoulder's cheeks now fuse to the cradle walls, closing a 0.5 mm slit. The output clevis plates gained a Ø19 × 0.2 pad on the horn face, and the wrist's idler pad was restored. 0.4 mm doublers now sit over the back-pad channels, and thin webs and slivers around the counterbores, plug bays and base flutes were removed (see `../cad/README.md`, Dimension checks). Moving mass 524 g (−1 g: filling the slit removed two internal wall surfaces from the shoulder). Torques, joint ranges and beam stresses are unchanged.
 
 The real-servo revision rebuilt every servo pocket from Feetech's CAD of the STS3215 (the model in SO-101's assembly), with 0.4 mm of printing clearance all round. The first printed parts didn't take the servos: the old servo model was up to 0.85 mm too small on the connector side and over the top-face rib. See `../cad/README.md`, The servo. Moving mass 522 g (−2 g: bigger pockets). The servo plugs are now modelled a little larger, so the elbow and wrist flex sweeps stop at −100° rather than −105°. Torques and beam stresses are unchanged to within 0.01 N·m. `pan_base_check.m` and `torque_check.m` still carry the 524 g masses; the 2 g difference moves their results by under 1 %.
+
+The review revision checked the design against the Feetech model again and against how it goes together. Moving mass stays 522 g; torques and joint ranges are unchanged.
+
+- **Case screw holes.** The bottom-face holes were modelled at (−33, ±10.3); on the servo they are at (−32.75, ±10.25). All case screw holes now sit on the measured positions, and `servo_reference.py` checks them.
+- **Pan servo.** It was held by two screws at its far end only. The case has a second pair of holes beside the shaft, and the base now uses both pairs (section 11 of the results).
+- **Passive horns.** M3 × 6 with the heads on the idler plate's outer face, instead of M3 × 5 in counterbores: 1.65 mm of thread instead of 1.45, one horn screw size for the whole arm, and a solid first layer on the idler plates.
+- **Beam check.** `design_check.py` used to fall back to 60 % of the solid section whenever one wall of a section was too thin to offset a core inside. That made the reported housing stress jump between 6.2 and 10.1 MPa on the same geometry. A wall up to two perimeters thick now counts as solid, which is how it prints. The forearm's housing comes out at 4.1 MPa (SF 2.5), not the 2.7 MPa an earlier run gave.
+- **Shoulder cradle posts (new check).** The shoulder servo's reaction torque is carried by its case screws low in the cradle and by one of the two posts beside the shaft. The posts are 4.1 mm thick and stand 16 mm clear of the cradle walls, and the load bends them across the layer lines. With the arm straight out and 200 g this is 8.2 MPa, safety factor 1.2 on the 10 MPa sustained limit, and 13.9 MPa at servo stall. That is the worst case (the case bearing on the very top of the post). It is inside the v1 rule (200 g only with the elbow bent), but it is now the lowest margin on the arm. The posts can't simply be made thicker: their outer faces are already at the edge of the upper arm's swing.
 
 The base was left alone on purpose. It's fixed, so it adds no joint torque, and its weight works against tipping.
 
@@ -117,7 +127,7 @@ Shortening the forearm barely helps. At 115 mm the elbow just drops under the li
 - **Printed mass:** PLA, 1.2 mm perimeters, 20 % infill. Servo 55 g + 6 g of screws and cable. Weigh the printed parts and update `M_SERVO`, `INFILL` and `T_SHELL`.
 - **STS3215 12 V figures:** stall 2.94 N·m, 4096 counts/rev, about 45 rpm no-load. Check these against the datasheet for your variant.
 - **Material:** printed PLA E = 2.3 GPa, 10 MPa sustained bending allowable (creep-limited), 20 MPa screw bearing allowable.
-- **Horn screws:** M3 on a 13.9 mm circle, into the horns' Ø2.5 tapped holes (per the reference servo model).
+- **Horn screws:** M3 on a 14 mm circle, into the horns' Ø2.5 tapped holes (per the Feetech servo model).
 - **Backlash:** isn't known. Each 0.5° at the shoulder moves the tip 3.6 mm, so measure it before promising ±2 mm repeatability.
 
 ## Shoulder and elbow torque (`torque_check.m`)
@@ -167,7 +177,7 @@ These figures come from a Python transliteration of the script, with the payload
 
 ## Full design check (`design_check.py`)
 
-Builds the CAD, then runs ten checks:
+Builds the CAD, then runs eleven checks:
 - mass budget
 - joint holding torque
 - CAD collision sweep for joint ranges
@@ -178,6 +188,7 @@ Builds the CAD, then runs ten checks:
 - horn screw bearing
 - gripper force, finger stress and opening
 - encoder resolution and forearm-length sensitivity
+- servo mounts: the shoulder cradle posts and the pan servo's case screws
 
 ```bash
 python design_check.py          # about 30 s; writes design_check_results.md and the plots

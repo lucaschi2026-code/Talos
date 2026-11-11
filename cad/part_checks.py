@@ -10,6 +10,8 @@ print face, by casting rays, so it checks the file the slicer gets, not only the
     ray    distance from a point to the first surface along a direction
     span   distance between the first surfaces either side of a point (a gap or a wall)
     open   nothing in the way for 80 mm (a servo's way in)
+    clear  a tool's way out from a screw head or a horn: the axis and a ring of lines round
+           it, all clear for 80 mm (a screwdriver on its screw, a horn through its opening)
 
 Servo pocket walls are checked against the servo itself (the Feetech STS3215 as measured
 from SO-101's CAD): each wall must sit FIT_C (0.4 mm) off the servo's face, the printing
@@ -60,6 +62,15 @@ def open_(name, p, d):
     return ("open", name, np.array(p, float), np.array(d, float), 80.0, math.inf)
 
 
+def clear(name, p, d, r):
+    """Straight way out from p along d for something of radius r (a driver, a screw head, a horn)."""
+    return ("clear", name, np.array(p, float), np.array(d, float), r)
+
+
+DRIVER_R = 1.9   # M2 case screws: the head (R1.75) and a 3.5 mm driver shaft
+KEY_R = 2.9      # M3 button heads: the head itself (R2.85) on its way to the seat
+
+
 def servo_frame(loc):
     T = loc.wrapped.Transformation()
     R = np.array([[T.Value(i, j) for j in (1, 2, 3)] for i in (1, 2, 3)])
@@ -99,13 +110,26 @@ def horn_pattern(at, axis, name, r=M3_CLEAR, keep_off=()):
     return out
 
 
-def case_holes(P, D, holes, z_land, z_cbore):
-    """M2 case screws: clearance hole through the land, counterbore beyond, servo frame."""
+def case_holes(P, D, holes, z_land, z_cbore, seat=None, cbore_angles=None):
+    """M2 case screws: clearance hole through the land, counterbore beyond, servo frame.
+    With `seat` (signed z of the head seat), also the driver's way out from the head."""
     out = []
     for x, y in holes:
         out.append(hole(f"M2 case screw clearance at ({x:g}, {y:g})", P((x, y, z_land)), D((0, 0, 1)), M2_CLEAR))
-        out.append(hole(f"M2 case screw c'bore at ({x:g}, {y:g})", P((x, y, z_cbore)), D((0, 0, 1)), M2_CBORE))
+        out.append(hole(f"M2 case screw c'bore at ({x:g}, {y:g})", P((x, y, z_cbore)), D((0, 0, 1)), M2_CBORE,
+                        **({"angles": cbore_angles(x, y)} if cbore_angles else {})))
+        if seat is not None:
+            sg = 1 if seat > 0 else -1
+            out.append(clear(f"driver reaches the M2 case screw at ({x:g}, {y:g})", P((x, y, seat + 0.05 * sg)),
+                             D((0, 0, sg)), DRIVER_R))
     return out
+
+
+def horn_ways(P, D):
+    """Both horns go on after the servo: each must pass out through its opening in the shell."""
+    return [clear("output horn passes through its opening", P((0, 0, SV["horn_face"] - 2.2)), D((0, 0, 1)), SV["horn_r"] + 0.3),
+            clear("passive horn passes through its opening", P((0, 0, -SV["passive_face"] + 1.9)), D((0, 0, -1)),
+                  SV["horn_r"] + 0.3)]
 
 
 def clevis_side(y_mid, out_side=True):
@@ -147,7 +171,11 @@ def base_probes():
            wall("pocket floor", P, D, (-25, 11, 0), (0, 0, -1), SV["bottom"]),
            wall("bump recess in the floor", P, D, (-24, 8, 0), (0, 0, -1), SV["bump"], PASS),
            open_("servo way in (from the top)", P(c), D((0, 0, 1)))]
-    pr += case_holes(P, D, ta.CASE_BACK, -17.4, -20.0)
+    z_land = -(SV["bottom"] + ta.FIT_C + ta.BASE_SEAT) / 2
+    pr += case_holes(P, D, ta.CASE_BACK, z_land, -ta.BASE_SEAT - 1.0, seat=-ta.BASE_SEAT)
+    # the pair beside the shaft opens into the plug bay on its -X side (no 0.2 mm wall left between them)
+    pr += case_holes(P, D, ta.CASE_BACK_SHAFT, z_land, -ta.BASE_SEAT - 1.0, seat=-ta.BASE_SEAT,
+                     cbore_angles=lambda x, y: (0, 45, 90, 135, 315) if y > 0 else (0, 45, 225, 270, 315))
     return pr
 
 
@@ -169,8 +197,11 @@ def shoulder_probes():
            open_("servo way in (from the top)", P((SV["cx"], 0, 0)), D((1, 0, 0))),
            # the case screws locate the servo: shoulder axis at H_SH
            span("cheek fused to the cradle wall (no slit)", (8, 21, 13), (0, 1, 0), 25.0 - (SV["top"] + ta.FIT_C))]
-    pr += case_holes(P, D, ta.CASE_FRONT, 17.0, 20.0)
-    pr += case_holes(P, D, ta.CASE_BACK, -17.5, -20.0)
+    pr += case_holes(P, D, ta.CASE_FRONT, 17.0, 20.0, seat=18.5)
+    pr += case_holes(P, D, ta.CASE_BACK, -17.5, -20.0, seat=-18.5)
+    pr += horn_ways(P, D)
+    for k, (x, y) in enumerate(ta.HORN_HOLES):  # fitted from above, before the shoulder servo goes in
+        pr.append(clear(f"pan horn screw {k + 1} goes in from above", (x, y, 4.05), (0, 0, 1), KEY_R))
     return pr
 
 
@@ -205,8 +236,9 @@ def link_probes(L, h1, w_mid, h_mid):
     for x, z in ta.IDLER_TAB_SCREWS:
         pr.append(hole(f"idler plate M3 pilot at ({x:g}, {z:g})", (x, -15, z), (0, 1, 0), 1.25))
     seat, bseat = ta.FRONT_SEAT, ta.SHELL_IN + 1.0
-    pr += case_holes(P, D, ta.CASE_FRONT, seat - 0.5, seat + 0.15)
-    pr += case_holes(P, D, ta.CASE_BACK, -(SV["bottom"] + bseat) / 2, -bseat - 0.25)
+    pr += case_holes(P, D, ta.CASE_FRONT, seat - 0.5, seat + 0.15, seat=seat)
+    pr += case_holes(P, D, ta.CASE_BACK, -(SV["bottom"] + bseat) / 2, -bseat - 0.25, seat=-bseat)
+    pr += horn_ways(P, D)
     return pr
 
 
@@ -217,11 +249,10 @@ def idler_probes():
            ray(f"pad R{ta.PAD_R:g}", (0, -18.75, -20), (0, 0, 1), 20 - ta.PAD_R),
            ray("neck end at reach 30", (40, y, 0), (-1, 0, 0), 10),
            ray("hub R10.5", (0, y, 30), (0, 0, -1), 30 - ta.IDLER_HUB_R)]
-    pr += horn_pattern((0, -ta.CLV_OUT + 0.4, 0), "y", "passive horn screw c'bore", M3_CBORE, keep_off=(0, 180))
-    for k, (u, v) in enumerate(ta.HORN_HOLES):  # c'bore floor 0.8 deep, beside the clearance hole
-        e = np.array((u, v)) / math.hypot(u, v) * 2.5
-        pr.append(ray(f"c'bore {k + 1} depth 0.8", (u + e[0], -30, v + e[1]), (0, 1, 0),
-                      30 - ta.CLV_OUT + ta.IDLER_CBORE))
+    for k, (u, v) in enumerate(ta.HORN_HOLES):  # the heads sit on the plain outer face (the bed face)
+        e = np.array((u, v)) / math.hypot(u, v) * 2.3
+        pr.append(ray(f"outer face under screw head {k + 1} (no counterbore)", (u + e[0], -30, v + e[1]), (0, 1, 0),
+                      30 - ta.CLV_OUT))
     for x, z in ta.IDLER_TAB_SCREWS:
         pr.append(hole(f"M3 tab screw clearance at ({x:g}, {z:g})", (x, y, z), (0, 1, 0), M3_CLEAR + 0.1))
     return pr
@@ -240,9 +271,7 @@ def wrist_probes():
            wall("pocket back wall", P, D, (-25, 11, 0), (0, 0, -1), SV["bottom"]),
            wall("bump recess in the back wall", P, D, (-24, 0, 0), (0, 0, -1), SV["bump"], PASS),
            open_("servo way in (along the roll axis)", P((SV["cx"], 0, 0)), D((0, 0, 1)))]
-    for x, y in ta.CASE_BACK:
-        pr.append(hole(f"M2 case screw clearance at ({x:g}, {y:g})", P((x, y, -17.25)), D((0, 0, 1)), M2_CLEAR))
-        pr.append(hole(f"M2 case screw c'bore at ({x:g}, {y:g})", P((x, y, -18.6)), D((0, 0, 1)), M2_CBORE))
+    pr += case_holes(P, D, ta.CASE_BACK, -17.25, -18.6, seat=-18.0)
     assert abs(P((0, 0, 0))[0] - xs) < 1e-9
     return pr
 
@@ -259,6 +288,20 @@ def gripper_probes():
           ray("finger width 20, -Y", (80, -30, -8), (0, 1, 0), 30 - ta.FINGER_HW)]
     pr += horn_pattern((1.75, 0, 0), "x", "roll horn screw")
     pr += horn_pattern((5.0, 0, 0), "x", "roll horn screw c'bore", M3_CBORE, keep_off=(180,))
+    for k, (y, z) in enumerate(ta.HORN_HOLES):
+        if z < 0:  # the lower two counterbores run on as grooves in the pocket floor
+            pr.append(hole(f"roll horn screw {k + 1} groove in the pocket floor", (ta.ROLL_CBORE_RUN - 2, y, z),
+                           (1, 0, 0), M3_CBORE, angles=(225, 270, 315)))
+        # the head (R2.85) must travel a screw's length along the axis without catching on the pocket floor
+        for a in (0, 90, 180, 270):
+            dy, dz = KEY_R * math.cos(math.radians(a)), KEY_R * math.sin(math.radians(a))
+            pr.append(ray(f"roll horn screw {k + 1}: head clears on its way in ({a} deg)", (3.55, y + dy, z + dz),
+                          (1, 0, 0), ta.ROLL_CBORE_RUN - 4.0, 80.0))
+        # 2 mm hex key: short leg along the screw axis, long leg up through the open top
+        pr.append(ray(f"roll horn screw {k + 1}: room along its axis for the hex key's short leg",
+                      (3.55, y, z), (1, 0, 0), 30.0, 80.0))
+        pr.append(clear(f"roll horn screw {k + 1}: hex key's long leg up through the open top",
+                        (3.5 + 18, y, z), (0, 0, 1), 1.2))
     pr.append(span("bump channel wall with doubler (0.8)", (ta.XJ - 25, -ta.SHELL_OUT - ta.DOUBLER + 0.4, ta.ZJ + 14),
                    (0, 1, 0), ta.SHELL_OUT + ta.DOUBLER - SV["bump"] - ta.PASS_C))
     c = (SV["cx"], 0, 0)
@@ -270,8 +313,9 @@ def gripper_probes():
            wall("pocket floor", P, D, c, (0, 1, 0), SV["half_w"]),
            open_("servo way in (from the top)", P(c), D((0, -1, 0)))]
     seat, bseat = ta.FRONT_SEAT, ta.SHELL_IN + 1.0
-    pr += case_holes(P, D, ta.CASE_FRONT, seat - 0.5, seat + 0.15)
-    pr += case_holes(P, D, ta.CASE_BACK, -(SV["bottom"] + bseat) / 2, -bseat - 0.25)
+    pr += case_holes(P, D, ta.CASE_FRONT, seat - 0.5, seat + 0.15, seat=seat)
+    pr += case_holes(P, D, ta.CASE_BACK, -(SV["bottom"] + bseat) / 2, -bseat - 0.25, seat=-bseat)
+    pr += horn_ways(P, D)
     return pr
 
 
@@ -374,6 +418,16 @@ def measure(mesh, R, t, pr):
                for a in angles]
         ok = all(abs(g - r) <= tol for g in got)
         return ok, f"R {min(got):.3f}..{max(got):.3f}", f"R {r:g} ±{tol:g}"
+    if kind == "clear":
+        _, _, p, d, r = pr
+        d = d / np.linalg.norm(d)
+        a = np.cross(d, (1, 0, 0)) if abs(d[0]) < 0.9 else np.cross(d, (0, 1, 0))
+        a /= np.linalg.norm(a)
+        b = np.cross(d, a)
+        starts = [p] + [p + r * (math.cos(math.radians(k)) * a + math.sin(math.radians(k)) * b)
+                        for k in range(0, 360, 30)]
+        got = min(mesh.hit(R @ q + t, R @ d) for q in starts)
+        return got >= 80.0, ("clear" if got == math.inf else f"blocked at {got:.2f}"), f"R {r:g} clear for 80"
     _, _, p, d, lo, hi = pr
     P, Dd = R @ p + t, R @ d
     got = mesh.hit(P, Dd) + (mesh.hit(P, -Dd) if kind == "span" else 0.0)
@@ -404,12 +458,12 @@ def check_part(part_no, solid, V, T, verbose=False):
 
 # ---------------------------------------------------------------- fits (solids)
 
-ENTRY = {"base": "+z", "shoulder": "+x", "upper arm": "+y", "forearm": "+y", "wrist": "+z", "gripper": "-y"}
+ENTRY = {name: way for name, (way, _) in ta.SERVO_ENTRY.items()}
 
 
 def fit_checks():
     """Servo in its pocket without touching, out along its way in, idler plates in their pockets."""
-    body, _, _ = ta.sts3215()
+    body, _, plugs = ta.sts3215()
     base, l1 = ta.base_parts()
     sh, l2 = ta.shoulder_parts()
     up, l3, _, idler = ta.arm_link(ta.L1)
@@ -429,6 +483,11 @@ def fit_checks():
         out.append((f"{name}: servo in its pocket", overlap < 0.01, f"overlap {overlap:.2f} mm3"))
         out.append((f"{name}: servo slides out {ENTRY[name]} (servo frame)", not blocked,
                     "free for 45 mm" if not blocked else f"blocked at {blocked[0]} mm"))
+        pl = plugs.val().moved(loc)  # the cable is plugged in before the servo goes in
+        blocked = [s for s in (0, 1, 2, 3.5, 5, 7.5, 10, 15, 20, 30, 45)
+                   if p.intersect(pl.translate(cq.Vector(*(s * d)))).Volume() > 0.01]
+        out.append((f"{name}: both plugs fitted, in the bay and on the way in", not blocked,
+                    "free for 45 mm" if not blocked else f"blocked at {blocked[0]} mm"))
     for name, part, plate in (("upper arm", up, idler), ("forearm", fo, idler2)):
         ov = part.val().intersect(plate.val()).Volume()
         out.append((f"{name}: idler plate TAL-110 in its pocket", ov < 0.01, f"overlap {ov:.2f} mm3"))
@@ -439,7 +498,9 @@ PROBES = probes()
 
 
 def main():
+    import sys
     import print_files as pf
+    sys.stdout.reconfigure(encoding="utf-8")
     total = bad = 0
     for part_no, (slug, qty, solid) in ta.printed_parts().items():
         s = ta.on_bed(solid, ta.PRINT_SETUP[part_no][0])

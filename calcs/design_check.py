@@ -269,18 +269,45 @@ def section(shape, x, delta=0.2):
     A = sum(face_props(f, 0)[0] for f in faces)
     zc = sum(face_props(f, 0)[1] for f in faces) / A
     I_solid = sum(face_props(f, zc)[2] for f in faces)
-    I_core = 0.0
-    try:  # core inside the printed perimeters only carries infill
-        for f in faces:
+    I_eff = 0.0
+    for f in faces:  # the core inside the printed perimeters only carries infill
+        I_f = face_props(f, zc)[2]
+        try:
             outer = f.outerWire().offset2D(-T_SHELL)[0]
             inner = [w.offset2D(T_SHELL)[0] for w in f.innerWires()]
-            I_core += face_props(cq.Face.makeFromWires(outer, inner), zc)[2]
-        I_eff = (I_solid - I_core) + INFILL * I_core
-    except Exception:
-        I_eff = 0.6 * I_solid
+            I_core = face_props(cq.Face.makeFromWires(outer, inner), zc)[2]
+            I_eff += (I_f - I_core) + INFILL * I_core
+        except Exception:
+            # No core could be offset inside this face. A wall up to two perimeters thick has
+            # none (it prints solid); anything thicker gets a flat 0.6, on that face only.
+            wall = 2 * f.Area() / sum(e.Length() for e in f.Edges())
+            I_eff += I_f if wall <= 2 * T_SHELL + 0.6 else 0.6 * I_f
     zs = [v.Z for f in faces for v in f.Vertices()]
     c = max(max(zs) - zc, zc - min(zs))
     return dict(A=A, I=I_solid, I_eff=I_eff, c=c)
+
+
+def post_section(shape, z, delta=0.2):
+    """One shoulder cradle post (the +X one) cut at height z: (I about its own Y axis with the
+    core at INFILL stiffness, half thickness), or None where the cut isn't a free-standing post."""
+    slab = shape.intersect(cq.Solid.makeBox(100, 200, delta, cq.Vector(0, -100, z - delta / 2)))
+    faces = [f for f in slab.Faces() if abs(f.normalAt().z) > 0.99 and abs(f.Center().z - (z + delta / 2)) < 1e-3]
+    if not faces:
+        return None
+    xs = [v.X for f in faces for v in f.Vertices()]
+    t = max(xs) - min(xs)
+    if t > 6.0:  # still inside the cradle box, where the side walls tie the posts together
+        return None
+    A = sum(face_props(f, 0)[0] for f in faces)
+    props = []
+    for f in faces:
+        g = GProp_GProps()
+        BRepGProp.SurfaceProperties_s(f.wrapped, g)
+        props.append((g.Mass(), g.CentreOfMass().X(), g.MatrixOfInertia().Value(2, 2)))  # (2,2) = int x^2 dA here
+    xc = sum(a * x for a, x, _ in props) / A
+    I = sum(i + a * (x - xc) ** 2 for a, x, i in props)
+    core = max(t - 2 * T_SHELL, 0.0) / t
+    return I * (1 - (1 - INFILL) * core ** 3), max(max(xs) - xc, xc - min(xs))
 
 
 def beam_check(parts, pose, link, L):
@@ -622,6 +649,54 @@ def main():
         w(f"| {L2:.0f}{mark} | {reach:.0f} | {sh:.2f} | {el:.2f} | {el/LIMIT:.2f}x |")
     ta.L2 = L2_design
     w("")
+
+    # --- servo mounts
+    w("## 11. Servo mounts\n")
+    w("### Shoulder cradle posts\n")
+    sh_shape = next(p["shape"] for p in parts if p["name"] == "shoulder")  # in its own link frame
+    z_top = sh_shape.BoundingBox().zmax
+    z_screws = ta.H_SH + (ta.CASE_FRONT[0][0] + ta.CASE_BACK[0][0]) / 2
+    rows = [(z, post_section(sh_shape, z)) for z in np.arange(z_top - 1.0, 20.0, -1.0)]
+    rows = [(z, r) for z, r in rows if r]
+    w("The shoulder servo's reaction torque is a couple between its case screws, low in the cradle, and "
+      "the top of one cradle post beside the shaft. That bends the post about its root, across the layer "
+      "lines (the shoulder prints turntable down). Worst case: the case bears on the very top of the post.\n")
+    w("| Load | Torque (N*m) | Force on the post (N) | Root moment (N*m) | Stress (MPa) | Safety factor |")
+    w("| --- | --- | --- | --- | --- | --- |")
+    post = {}
+    for lbl, tau in (("holding, no payload", static["shoulder"][0]), ("holding, 200 g", static["shoulder"][1]),
+                     ("servo stall", TAU_STALL)):
+        F = tau / ((z_top - z_screws) / 1000)
+        z, (I, c) = max(rows, key=lambda r: (z_top - r[0]) * r[1][1] / r[1][0])
+        M = F * (z_top - z) / 1000
+        sig = M * 1000 * c / I
+        post[lbl] = sig
+        w(f"| {lbl} | {tau:.2f} | {F:.0f} | {M:.2f} | {sig:.1f} | {SIGMA_ALLOW/sig:.1f} |")
+    w(f"\nPost root at z {z:.0f} above the turntable underside, top at {z_top:.0f}; case screws at "
+      f"{z_screws:.1f}. Allowable {SIGMA_ALLOW:.0f} MPa sustained, as for the links, but here the stress "
+      "pulls the layers apart, where printed PLA is weakest.\n")
+    w("### Pan servo case screws\n")
+    w(f"The pan servo carries the {Mot_h:.2f} N*m overturning moment into the base through its bottom face "
+      "and its case screws. The servo tips about an edge of its bottom face; the screws on the far side "
+      "hold it down. The arm pans, so the moment can point any way.\n")
+    w("| Tipping about | Far pair only, per screw (N) | Both pairs, per screw (N) |")
+    w("| --- | --- | --- |")
+    far, near = ta.CASE_BACK[0][0], ta.CASE_BACK_SHAFT[0][0]
+    hy, M = ta.CASE_BACK[0][1], Mot_h * 1000
+    worst4 = 0.0
+    for lbl, lev2, lev4 in (
+            ("the shaft-side edge of the bottom face", [ta.FACE_X - far] * 2,
+             [ta.FACE_X - far] * 2 + [ta.FACE_X - near] * 2),
+            ("the far end", [far - ta.CASE_X[0]] * 2, [far - ta.CASE_X[0]] * 2 + [near - ta.CASE_X[0]] * 2),
+            ("a long side", [ta.CASE_HW - hy, ta.CASE_HW + hy], [ta.CASE_HW - hy, ta.CASE_HW + hy] * 2)):
+        f2 = M * max(lev2) / sum(d * d for d in lev2)
+        f4 = M * max(lev4) / sum(d * d for d in lev4)
+        worst4 = max(worst4, f4)
+        w(f"| {lbl} | {f2:.0f} | {f4:.0f} |")
+    seat = math.pi * (ta.SCREW[2]["head_r"] ** 2 - ta.SCREW[2]["clear"] ** 2)
+    w(f"\nWith four screws the worst is {worst4:.0f} N on an M2, {worst4/seat:.1f} MPa under its head "
+      f"(allowable {BEARING_ALLOW:.0f} MPa). With only the far pair, a moment that lifts the shaft end has "
+      "a few millimetres of lever, so the servo rocks in its 0.4 mm clearance instead of being held.\n")
 
     (HERE / "design_check_results.md").write_text("\n".join(out), encoding="utf-8")
     print("\n".join(out))

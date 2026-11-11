@@ -43,6 +43,12 @@ from OCP.TopoDS import TopoDS
 
 import talos_arm as ta
 
+# Servo case screw holes (servo frame): x of the top-face pair, of the bottom-face pair and of the
+# bottom-face pair beside the shaft, and their half spacing in y.
+HXF, HXB, HXS, HY = ta.CASE_FRONT[0][0], ta.CASE_BACK[0][0], ta.CASE_BACK_SHAFT[0][0], ta.CASE_FRONT[0][1]
+ZB = ta.H_SH + HXB                                # shoulder: height of the -Y cheek's case screws
+HK = round(ta.HORN_PCD_R / math.sqrt(2), 2)       # horn hole offset along each axis: 4.95
+
 # ---------------------------------------------------------------- lettering
 
 FONT_FILES = (("ISOCPEUR", "isocpeur.ttf"), ("GENISO", "GENISO.ttf"))  # ISO 3098; GENISO has the ⌴ ↧ glyphs
@@ -114,7 +120,7 @@ CHAIN = (0, (6, 1.5, 1, 1.5))               # centre / cutting-plane line patter
 
 # The parts are split into two work sets so two people can model them in parallel.
 # The reference sheets (TAL-0xx) go in both. The split is balanced on modelling steps
-# (A 45, B 48). The sets only meet at the elbow (upper arm shell -> forearm clevis), and
+# (A 45, B 47). The sets only meet at the elbow (upper arm shell -> forearm clevis), and
 # both sides of it are defined on the shared sheets (servo pocket P, clevis).
 WORK_SETS = {
     "A": ("base-to-upper-arm", "base, shoulder, upper arm, hub caps, fit gauge",
@@ -813,10 +819,9 @@ def sheet_assembly():
                ("TAL-111", "Servo fit gauge (print first)", 1)]
     bought = [
         ["Feetech STS3215 servo (12 V: C018 / C047)", "6"], ["Waveshare Bus Servo Adapter (A)", "1"],
-        ["M3 x 6 button head (output horns)", "24"], ["M3 x 5 button head (passive horns)", "12"],
+        ["M3 x 6 button head (output and passive horns)", "36"],
         ["M3 x 10 button head (idler plates)", "4"],
-        ["M2 x 4 self-tapping (servo cases)", "6"], ["M2 x 5 self-tapping (servo cases)", "6"],
-        ["M2 x 6 self-tapping (servo cases)", "8"],
+        ["M2 x 5 self-tapping (servo cases)", "10"], ["M2 x 6 self-tapping (servo cases)", "12"],
         ["M2.5 x 6 self-tapping (board)", "4"], ["M4 bolts to the table (user's)", "4"],
         ["3-pin bus servo cables (with servos)", "6"],
     ]
@@ -833,7 +838,7 @@ def sheet_assembly():
         "roll servos may keep theirs); plug a 3-pin cable into the servo; push the servo into its part along "
         "its entry path (part sheet notes); fit its M2 case screws; refit both horns through the R10.8 "
         "openings, each with its centre screw; fit the next link with 4X M3 × 6 into the output horn and "
-        "4X M3 × 5 into the passive horn.",
+        "4X M3 × 6 into the passive horn.",
         "Print TAL-111 first and check the servo fit before printing the arm. Each part sheet gives "
         "the print orientation; print-ready 3MF files are in cad/print.",
     ]
@@ -871,7 +876,8 @@ def sheet_cap(large=True):
         f"Recess {DIA}{fmt(2 * recess)}, 1.8 deep from the inner face (clears M3 button heads, 1.65 high).",
     ]
     s.features("FEATURES (in order)", feats)
-    s.notes(GENERAL + ["Press-fit or glue onto the output-side clevis plate over the four horn screws.",
+    s.notes(GENERAL + ["Glue or tape onto the output-side clevis plate over the four horn screws (the recess is 0.55 clear "
+                       "of the screw heads all round, so it does not grip them).",
                        print_note(no)])
     s.mass = printed_mass(cap)
     return s
@@ -888,8 +894,7 @@ def sheet_idler():
     s.iso(idl, (200, 20, 272, 140), max_scale=2)
     s.center("front", (0, 0, 0), 10.5)
     s.callout("front", s.on_circle("front", (0, 0, 0), 10.5, 215), "R10.5", -12, -20)
-    horn_callouts(s, "front", (0, 0, 0), (1, 0, 0), (0, 0, 1), dx=(-26, 46), dy=(30, 52),
-                  extra=f" {CBORE}{DIA}6.5 {DEPTH}0.8")
+    horn_callouts(s, "front", (0, 0, 0), (1, 0, 0), (0, 0, 1), dx=(-26, 46), dy=(30, 52))
     s.callout("front", (26 - 1.2, 0, 7 + 1.2), f"2X {DIA}{fmt(TAB_HOLE_D)} THRU", -14, 22)
     for name, (x, z), off in (("N1", (0, 10.5), (-2, 2)), ("N2", (6, 8.5), (1, 2)), ("N3", (18, 8.5), (0, 2)),
                               ("N4", (30, 15), (1.5, 1.5))):
@@ -908,18 +913,15 @@ def sheet_idler():
         "Same outline as the idler plate on TAL-002.",
         f"Pad {DIA}19 on the inner face, y -18.9 to {fmt(-ta.PASSIVE_FACE)}: it bears on the servo's passive horn.",
         f"Centre hole {DIA}7 through: clears the servo's idler boss (nothing screws into the boss).",
-        f"Horn holes: 4X {DIA}{fmt(M3_HOLE_D)} through on {DIA}{fmt(PCD_D)} PCD at 45°, counterbore {DIA}6.5 "
-        f"0.8 deep from the outer face (4X M3 × {ta.PASSIVE_SCREW} into the passive horn).",
-        f"Counterbore clean-up, 0.8 deep from the outer face: {DIA}8.6 on the centre (no thin web between the "
-        f"counterbores and the centre hole); the two counterbores at x < 0 run out through the hub rim "
-        f"(second {DIA}6.5 3 further out along each one's radius), so no sliver is left on the first layer.",
+        f"Horn holes: 4X {DIA}{fmt(M3_HOLE_D)} through on {DIA}{fmt(PCD_D)} PCD at 45°, no counterbore (4X M3 × "
+        f"{ta.PASSIVE_SCREW} into the passive horn, heads on the outer face).",
         f"Tab holes: 2X {DIA}{fmt(TAB_HOLE_D)} through at x 26, z ±7 (M3 × 10 into the arm link).",
     ])
     s.notes(GENERAL + [
         "One on each arm link (TAL-103, TAL-104), in the pocket on the link's -Y side: 2X M3 × 10 into the "
-        f"link, 4X M3 × {ta.PASSIVE_SCREW} into the servo's passive horn, which turns on the idler boss (an "
-        "M3 × 6 would reach the servo case behind the 1.95 thick horn). No hub cap on this side: one wide "
-        "enough for the screws would hit the parent servo's plugs.",
+        f"link, 4X M3 × {ta.PASSIVE_SCREW} into the servo's passive horn, which turns on the idler boss (the "
+        f"tip stops {fmt(ta.PASSIVE_FACE - ta.CLV_OUT + ta.PASSIVE_SCREW)} into the horn, short of the servo "
+        "case). No hub cap on this side: one wide enough for the screws would hit the parent servo's plugs.",
         print_note("TAL-110"),
     ])
     s.mass = printed_mass(idl)
@@ -1062,9 +1064,9 @@ def sheet_servo():
                                (bump[0], 0, -bump[3]), (-16.9, 0, -26), (0, 0, 0)], "left")
     s1.ordinate("front", "v", [(x1, 0, -ta.PASSIVE_FACE), (x1, 0, ta.CORE_Z[0]), (x1, 0, ta.CORE_Z[1]),
                                (x1, 0, ta.HORN_DISC), (x1, 0, ta.HORN_FACE)], "right")
-    s1.ordinate("top", "v", [(x0, -ta.CASE_HW, 0), (-29, -10.3, 0), (x0, 0, 0), (-29, 10.3, 0),
+    s1.ordinate("top", "v", [(x0, -ta.CASE_HW, 0), (HXF, -HY, 0), (x0, 0, 0), (HXF, HY, 0),
                              (x0, ta.CASE_HW, 0)], "left")
-    s1.callout("top", (-29, 10.3 + 0.75, 0), f"2X {DIA}1.5 {DEPTH}4 (M2 SELF-TAP)\nTOP FACE, X -29", 8, 26)
+    s1.callout("top", (HXF, HY + 0.8, 0), f"2X {DIA}1.6 (M2 SELF-TAP)\nTOP FACE, X {fmt(HXF)}", 8, 26)
     s1.callout("top", s1.on_circle("top", (0, 0, 0), ta.HORN_R, 300),
                f"HORN {DIA}{fmt(2 * ta.HORN_R)} × {fmt(ta.HORN_FACE - ta.HORN_DISC)}", 18, -18)
     horn_callouts(s1, "top", (0, 0, 0), (1, 0, 0), (0, 1, 0), dx=(40, 22), dy=(-6, 26),
@@ -1088,7 +1090,8 @@ def sheet_servo():
         f"{fmt(ta.SPLINE[1])}.",
         f"Passive horn {DIA}{fmt(2 * ta.HORN_R)}: disc z {fmt(-ta.PASSIVE_DISC)} to {fmt(-ta.PASSIVE_FACE)}, "
         f"turning on the idler boss {DIA}{fmt(2 * ta.BOSS[0])} (tip z {fmt(-ta.BOSS[1])}).",
-        f"Case holes {DIA}1.5 {DEPTH}4 (M2 self-tap): top face at (-29, ±10.3), bottom face at (-33, ±10.3).",
+        f"Case holes {DIA}1.6 (M2 self-tap): top face at ({fmt(HXF)}, ±{fmt(HY)}), bottom face at "
+        f"({fmt(HXB)}, ±{fmt(HY)}). Each face has a second pair at x {fmt(HXS)}; the base uses the bottom one.",
     ])
     s1.notes(["Bought part: Feetech STS3215 (the 7.4 V and 12 V variants share this case). Sizes measured "
               "from Feetech's CAD inside SO-101's assembly STEP (cad/reference/so101/step/"
@@ -1153,8 +1156,7 @@ def sheet_common():
     s1.center("front", (0, 0, 0), 10.5)
     s1.center("rear", (0, 0, 0), 16)
     s1.callout("front", s1.on_circle("front", (0, 0, 0), 10.5, 215), "R10.5", -10, -18)
-    horn_callouts(s1, "front", (0, 0, 0), (1, 0, 0), (0, 0, 1), dx=(26, 12), dy=(-20, 40),
-                  extra=f" {CBORE}{DIA}6.5 {DEPTH}0.8")
+    horn_callouts(s1, "front", (0, 0, 0), (1, 0, 0), (0, 0, 1), dx=(26, 12), dy=(-20, 40))
     for name, (x, z), off in (("N1", (0, 10.5), (-2, 2)), ("N2", (6, 8.5), (1, 2)), ("N3", (18, 8.5), (0, 2)),
                               ("N4", (30, 15), (1.5, 1.5))):
         s1.tag("front", (x, 0, z), name, *off)
@@ -1181,9 +1183,8 @@ def sheet_common():
         "clears the parent servo's bus plugs.",
         f"Idler plate pad {DIA}19 on the inner face, y -18.9 to {fmt(-ta.PASSIVE_FACE)}, bearing on the passive "
         f"horn; centre {DIA}7 through (clears the idler boss); 4X {DIA}{fmt(M3_HOLE_D)} on {DIA}{fmt(PCD_D)} PCD "
-        f"at 45°, counterbore {DIA}6.5 0.8 deep from outside (4X M3 × {ta.PASSIVE_SCREW} into the passive horn, "
-        f"which turns on the boss); {DIA}8.6 0.8 deep "
-        f"on the centre, and the two counterbores at x < 0 run out through the hub rim (see TAL-110).",
+        f"at 45°, no counterbore (4X M3 × {ta.PASSIVE_SCREW} into the passive horn, which turns on the boss; "
+        f"heads on the outer face).",
         "Clevis gap in the link body: remove a cylinder R21 about Y between y ±18.9, and everything at "
         "x < 0 between those planes, except the two horn pads (dimensioned on each link's section).",
     ])
@@ -1218,7 +1219,7 @@ def sheet_common():
     s2.table("SEAT S (FROM THE SERVO MID-PLANE)", ["PART", "FACE", "S"],
              [["arm shells, gripper", "top", fmt(ta.FRONT_SEAT)], ["arm shells, gripper", "bottom",
                                                                    fmt(ta.SHELL_IN + 1.0)],
-              ["shoulder", "both", "18.5"], ["base", "bottom", "18.4"], ["wrist", "bottom", "18.0"]],
+              ["shoulder", "both", "18.5"], ["base", "bottom", fmt(ta.BASE_SEAT)], ["wrist", "bottom", "18.0"]],
              [52, 18, 18])
     win = as_shape(ta.box(-6, 46, -1, 1, -14, 14).cut(ta.prism_xz(ta.hex_pts(0, 40, 0, 10), -2, 2)))
     s2.add_view("hex", win, "front", (140, 14, 272, 150), scale=2, hidden=False, label="HEX WINDOW H(xa, xb, zc, k)")
@@ -1261,10 +1262,11 @@ def sheet_base():
         s1.tag("top", (x, y, 10), name, dx, dy)
         rows.append([name, fmt(x), fmt(y)])
     s1.table("BOARD DECK POINTS (X, Y)", ["PT", "X", "Y"], rows, [14, 22, 22])
-    s1.ordinate("top", "h", [(-85.5, 18.5, 15), (-57.5, 18.5, 15), (-36, 12.8, top), (-33, 10.3, 27),
+    seat_z = ta.H_PAN - ta.HORN_FACE - ta.BASE_SEAT  # case screw head seats, above the table
+    s1.ordinate("top", "h", [(-85.5, 18.5, 15), (-57.5, 18.5, 15), (-36, 12.8, top), (HXB, HY, 27),
                              (0, 0, 0), (11, 12.8, top), (66, 0, 10)], "above")
     s1.ordinate("top", "v", [(-85.5, -18.5, 15), (-85.5, 18.5, 15), (-36, -12.8, top), (-36, 12.8, top),
-                             (-36, 0, 0), (-33, -10.3, 27), (-33, 10.3, 27)], "left")
+                             (-36, 0, 0), (HXB, -HY, 27), (HXB, HY, 27)], "left")
     s1.circle_line("top", (0, 0, 0), 54)
     a45 = (54 * math.cos(math.radians(45)), 54 * math.sin(math.radians(45)), 10)
     s1.callout("top", (a45[0] + 3.1, a45[1] + 3.1, 10),
@@ -1272,7 +1274,8 @@ def sheet_base():
     s1.angle("top", (0, 0, 0), (70, 0, 0), (a45[0] * 1.3, a45[1] * 1.3, 0), 30)
     s1.callout("top", (-57.5 + 2.3, 18.5 + 2.3, 15), f"4X {DIA}6.4 BOSS, TOP Z 15\nPILOT {DIA}2.1 {DEPTH}7 (M2.5)",
                -10, 62)
-    s1.callout("top", (-33 + 0.85, -10.3 - 0.85, 27), f"2X {DIA}2.4 THRU FLOOR\n{CBORE}{DIA}4.2 FROM BOTTOM {DEPTH}24.9",
+    s1.callout("top", (HXB + 0.85, -HY - 0.85, 27),
+               f"4X {DIA}2.4 THRU FLOOR\nAT X {fmt(HXB)}, {fmt(HXS)}\n{CBORE}{DIA}4.2 FROM BOTTOM {DEPTH}{fmt(seat_z)}",
                -20, -64)
     f10 = (41.4 * math.cos(math.radians(10)), 41.4 * math.sin(math.radians(10)), 0)
     s1.callout("top", (f10[0] + 2.0, f10[1] - 1.6, 0), "18X FLUTE R2.6 ON R41.4\n20° PITCH, FIRST AT 10°", 20, -58)
@@ -1294,12 +1297,15 @@ def sheet_base():
         "in from the top, connector end first).",
         "Cable tunnel (plug bay to board deck): cut box x -60 to -13, y ±6, z 14.8 to 24.5. Pocket P's bump "
         "channel (z down to 24.3) opens into its roof.",
-        f"Case screw holes from below (TAL-002, seat 18.4) at x -33, y ±10.3: {DIA}2.4 from z 24.9 up to the "
-        f"pocket floor (z {fmt(ta.H_PAN - ta.HORN_FACE - ta.BOTTOM_FACE - ta.FIT_C)}), {DIA}4.2 counterbore "
-        "from the bottom to z 24.9.",
+        f"Case screw holes from below (TAL-002, seat {fmt(ta.BASE_SEAT)}): 4X at x {fmt(HXB)} and x {fmt(HXS)}, "
+        f"y ±{fmt(HY)}: {DIA}2.4 from z {fmt(seat_z)} up to the pocket floor (z "
+        f"{fmt(ta.H_PAN - ta.HORN_FACE - ta.BOTTOM_FACE - ta.FIT_C)}), {DIA}4.2 counterbore from the bottom to z "
+        f"{fmt(seat_z)}. The pair at x {fmt(HXS)} runs 0.2 from the plug bay: cut the wall between them away "
+        f"(box x -10.6 to {fmt(HXS)}, |y| {fmt(HY - 2.1)} to 10.6, z 14.8 to {fmt(seat_z)}).",
     ])
     s1.notes(GENERAL + ["The pan servo drops in from the top (its horns may stay on); its plugs hang into the "
-                        "bay under it. 2X M2 × 5 case screws from below.",
+                        "bay under it. 4X M2 × 6 case screws from below, two at each end of the servo, so the "
+                        "arm's overturning moment can't rock it in the pocket.",
                         print_note("TAL-101")])
 
     s2 = Sheet("Base", "TAL-101", slug="base", frame=frame, page=2, pages=2)
@@ -1337,12 +1343,12 @@ def sheet_shoulder():
     s1.mass = printed_mass(sh)
     point_table(s1, "front", [("T1", (-24, 6)), ("T2", (24, 6)), ("T3", (14, 21)), ("T4", (-14, 21))],
                 heading="CHEEK PROFILE (X, Z)", tag_offsets={"T1": (-2, 2), "T4": (-2, 2)})
-    s1.ordinate("front", "h", [(-37, 0, 0), (-17, 0, 0), (-12.9, 0, 50), (-10.3, 0, 13), (0, 0, 0),
-                               (10.3, 0, 13), (12.9, 0, 50), (17, 0, 0), (37, 0, 0)], "below")
-    s1.ordinate("front", "v", [(-37, 0, 0), (-37, 0, 6), (-17, 0, 13), (-17, 0, 14.5), (-17, 0, 34),
+    s1.ordinate("front", "h", [(-37, 0, 0), (-17, 0, 0), (-12.9, 0, 50), (-HY, 0, ZB), (0, 0, 0),
+                               (HY, 0, ZB), (12.9, 0, 50), (17, 0, 0), (37, 0, 0)], "below")
+    s1.ordinate("front", "v", [(-37, 0, 0), (-37, 0, 6), (-17, 0, ZB), (-17, 0, 14.5), (-17, 0, 34),
                                (-17, 0, ta.H_SH), (-17, 0, ta.H_SH + 4)], "left")
     s1.callout("front", (2.8, -25, 16.8), f"{DIA}8 THRU (ALONG Y)", -4, 42)
-    s1.callout("front", (10.3 + 1.5, -25, 13 + 1.5), f"2X {DIA}4.2 THRU CHEEK\n{DIA}2.4 TO POCKET (SEAT 18.5)",
+    s1.callout("front", (HY + 1.5, -25, ZB + 1.5), f"2X {DIA}4.2 THRU CHEEK\n{DIA}2.4 TO POCKET (SEAT 18.5)",
                40, 46)
     s1.callout("front", (35.6, 0, 5.4), "C2", 10, 16)
     s1.callout("front", (36.6, 0, 0.4), "C0.8", 10, -10)
@@ -1354,7 +1360,7 @@ def sheet_shoulder():
              (33 * math.cos(math.radians(18)), 33 * math.sin(math.radians(18)), 0), 40)
     horn_callouts(s1, "top", (0, 0, 10), (1, 0, 0), (0, 1, 0), dx=(26, 30), dy=(-36, 48),
                   extra=f"\n{CBORE}{DIA}6.5 {DEPTH}6 FROM INSIDE")
-    s1.cut_line("top", ((10.3, -38, 0), (10.3, 38, 0)), np.array([1, 0, 0]), "A")
+    s1.cut_line("top", ((HY, -38, 0), (HY, 38, 0)), np.array([1, 0, 0]), "A")
     s1.features("FEATURES (in order)", [
         f"Turntable {DIA}74, z 0 to 6; C2 top edge, C0.8 bottom edge.",
         "Cradle: box x ±17, y ±18.4, z 5 to 34.",
@@ -1374,26 +1380,25 @@ def sheet_shoulder():
         f"{DIA}6.5 from the floor (z 10) down to z 4 (M3 × 6 from inside the cradle); centre opened to "
         f"{DIA}8.6 over the same depth (no thin web between the counterbores and the centre hole).",
         "Turntable windows: 4X arc slot R27 to R33, ±18° about 0°, 90°, 180°, 270°, through.",
-        f"Case screw holes (TAL-002, seat 18.5) through the cheeks: +Y cheek at x ±10.3, z 17; "
-        f"-Y cheek at x ±10.3, z 13.",
+        f"Case screw holes (TAL-002, seat 18.5) through the cheeks: +Y cheek at x ±{fmt(HY)}, z "
+        f"{fmt(ta.H_SH + HXF)}; -Y cheek at x ±{fmt(HY)}, z {fmt(ZB)}.",
     ])
     s1.notes(GENERAL + ["Fit the shoulder servo from the top, far end first with the shaft to +Y, with both "
                         "horns off; then the case screws through the cheeks (2X M2 × 6 on +Y, 2X M2 × 5 on -Y).",
                         print_note("TAL-102")])
 
     s2 = Sheet("Shoulder (turntable + cradle)", "TAL-102", slug="shoulder", frame=frame, page=2, pages=2)
-    sc = s2.section("A", sh, (10.3, 0, 0), (1, 0, 0), (0, -1, 0), (14, 140, 180, 283), scale=1.5,
+    sc = s2.section("A", sh, (HY, 0, 0), (1, 0, 0), (0, -1, 0), (14, 140, 180, 283), scale=1.5,
                     label="SECTION A-A", margins=(36, 40, 10, 10))
     s2.scale_label = SCALE_NAME[sc]
     frame_mark(s2, "A", (0, 0, ta.H_SH), "P0", 4, 3)
-    s2.ordinate("A", "v", [(0, 25, 0), (0, 25, 6), (0, 15.9, 10.5), (0, -25, 13), (0, 25, 17), (0, 25, 21),
+    s2.ordinate("A", "v", [(0, 25, 0), (0, 25, 6), (0, 15.9, 10.5), (0, -25, ZB), (0, 25, 17), (0, 25, 21),
                            (0, 18.4, ta.H_SH)], "left")
-    s2.ordinate("A", "h", [(0, 25, 6), (0, 18.5, 17), (0, 15.5, 17), (0, -16.5, 13),
-                           (0, -18.5, 13), (0, -25, 6)], "below")
+    s2.ordinate("A", "h", [(0, 25, 6), (0, 18.5, 17), (0, 15.5, 17), (0, -16.5, ZB),
+                           (0, -18.5, ZB), (0, -25, 6)], "below")
     s2.callout("A", (0, 18.5 + 1, 17 + 2.1), f"{CBORE}{DIA}4.2 TO SEAT", 26, 26)
-    s2.callout("A", (0, -16.5 - 0.7, 13 - 1.2), f"{DIA}2.4", -24, -20)
+    s2.callout("A", (0, -16.5 - 0.7, ZB - 1.2), f"{DIA}2.4", -24, -20)
     s2.note("A", (0, 0, 30), "POCKET P (TAL-001)", 34, 40)
-    HK = round(ta.HORN_PCD_R / math.sqrt(2), 2)  # horn hole offset along x and y: 4.95
     s2.section("B", sh, (HK, 0, 0), (-1, 0, 0), (0, 1, 0), (14, 14, 180, 140), scale=1.5,
                label="SECTION B-B", margins=(36, 30, 10, 10))
     s2.add_view("left", sh, "left", (180, 150, 272, 283), scale=1, label="LEFT", margins=(30, 30, 6, 6))
@@ -1406,8 +1411,8 @@ def sheet_shoulder():
     s2.callout("B", (HK, -HK - M3_HOLE_D / 2, 2), f"{DIA}{fmt(M3_HOLE_D)}", -16, -24)
     s1.cut_line("front", ((HK, 0, -1), (HK, 0, 51)), np.array([-1, 0, 0]), "B")
     s2.features("SECTIONS", [
-        "* A-A: plane x 10.3 through one hole of each case screw row (cutting line on sheet 1, "
-        "top view), looking toward +X. The other holes mirror at x -10.3.",
+        f"* A-A: plane x {fmt(HY)} through one hole of each case screw row (cutting line on sheet 1, "
+        f"top view), looking toward +X. The other holes mirror at x {fmt(-HY)}.",
         f"* B-B: plane x {fmt(HK)} through two pan horn screw holes (cutting line on sheet 1, front view).",
     ])
     s2.notes(GENERAL[:1])
@@ -1451,10 +1456,10 @@ def sheet_arm(upper=True):
     s1.center("front", (L, 0, 0), 18)
     zb = ta.Z_BED
     s1.ordinate("front", "h", [(0, 0, zb), (x0, 0, zb), (26, 0, -7), (xm, 0, zb), (x1, 0, zb),
-                               (L - 38.2, 0, zb), (L - 34.2, 0, 15.4), (L - 33, 0, -10.3), (L, 0, zb)],
+                               (L - 38.2, 0, zb), (L - 34.2, 0, 15.4), (L + HXB, 0, -HY), (L, 0, zb)],
                 "below")
-    s1.ordinate("front", "v", [(L + 18, 0, zb), (L + 18, 0, -10.3), (L + 18, 0, 0),
-                               (L + 18, 0, 10.3), (L + 18, 0, 11.4), (L + 18, 0, 15.4)], "right")
+    s1.ordinate("front", "v", [(L + 18, 0, zb), (L + 18, 0, -HY), (L + 18, 0, 0),
+                               (L + 18, 0, HY), (L + 18, 0, 11.4), (L + 18, 0, 15.4)], "right")
     s1.ordinate("front", "v", [(-16, 0, -7), (-16, 0, 7)], "left")
     s1.callout("front", s1.on_circle("front", (L, 0, 0), 18, -40), "R18", 4, -26)
     s1.callout("front", s1.on_circle("front", (0, 0, 0), 16, 125),
@@ -1462,8 +1467,8 @@ def sheet_arm(upper=True):
     s1.callout("front", (26 - 0.9, 0, -7 - 0.9),
                f"2X {DIA}2.5 {DEPTH}8 (M3 × 10)\nIN IDLER PLATE POCKET:\nTAL-110 OUTLINE + 0.3\nY -23.9 TO -18.9",
                -12, -38)
-    s1.callout("front", (L - 33 - 1.5, 0, 10.3 + 1.5),
-               f"4X {CBORE}{DIA}4.2, {DIA}2.4 TO POCKET\n-Y FACE X {fmt(L - 33)}, SEAT "
+    s1.callout("front", (L + HXB - 1.5, 0, HY + 1.5),
+               f"4X {CBORE}{DIA}4.2, {DIA}2.4 TO POCKET\n-Y FACE X {fmt(L + HXB)}, SEAT "
                f"{fmt(ta.SHELL_IN + 1.0)}\n+Y FACE X {fmt(L - 29)}, SEAT {fmt(ta.FRONT_SEAT)}", 12, 24)
     tags, rows = {}, []
     for k, win in enumerate(wins):
@@ -1508,13 +1513,14 @@ def sheet_arm(upper=True):
         f"below 9.7; plug window x {fmt(L - 17.6)} to {fmt(L - 10.6)}, z below 10.6; notch through the wall x "
         f"{fmt(L - 17.6)} to {fmt(L + 3.5)}, z below 0 (joins the plug window and the idler hole).",
         f"Case screw holes (TAL-002): +Y face (seat {fmt(ta.FRONT_SEAT)}, over the rib channel; heads stand 0.7 "
-        f"proud) at x {fmt(L - 29)}, z ±10.3; -Y face (seat {fmt(ta.SHELL_IN + 1.0)}) at x {fmt(L - 33)}, z ±10.3.",
+        f"proud) at x {fmt(L + HXF)}, z ±{fmt(HY)}; -Y face (seat {fmt(ta.SHELL_IN + 1.0)}) at x {fmt(L + HXB)}, "
+        f"z ±{fmt(HY)}.",
         "Idler plate pocket: the TAL-110 outline (circle R10.5 + neck N1 to N4) grown 0.3, cut from "
         "y -23.9 to -18.9.",
         f"Idler plate screw holes: 2X {DIA}2.5 at x 26, z ±7, from y -18.9 8 deep (M3 × 10).",
     ])
     s1.notes(GENERAL + [f"Fit the {distal} servo from below, shaft to +Y, with both horns off; then the case "
-                        "screws (2X M2 × 6 on +Y, 2X M2 × 4 on -Y) and refit the horns.",
+                        "screws (2X M2 × 6 on +Y, 2X M2 × 5 on -Y) and refit the horns.",
                         f"The {distal} servo's bus plugs come out through the -Y shell wall.",
                         f"Print: {ta.PRINT_SETUP[no][1]}. The flat underside is z {fmt(zb)}."])
 
@@ -1590,9 +1596,9 @@ def sheet_wrist():
         f"Plug bay exit to -Y: cut boxes x {fmt(xs - 28.5)} to {fmt(xs - 15.5)}: y -18.6 to 0, z -17.6 to -10.6; "
         "and y -30 to 0, z -17.6 to -12.4.",
         f"Side windows: hex window H({fmt(xs - 8)}, 57, -12, 8) through Y (TAL-002).",
-        f"Case screw holes (TAL-002, seat 18.0), bottom face only, from the back wall: (y, z) = (±10.3, -33).",
+        f"Case screw holes (TAL-002, seat 18.0), bottom face only, from the back wall: (y, z) = (±{fmt(HY)}, {fmt(HXB)}).",
     ])
-    s1.notes(GENERAL + ["Fit the roll servo's 2X M2 × 5 case screws before the gripper goes on.",
+    s1.notes(GENERAL + ["Fit the roll servo's 2X M2 × 5 case screws from the clevis side, before the wrist goes onto the forearm.",
                         print_note("TAL-105")])
 
     s2 = Sheet("Wrist", "TAL-105", slug="wrist", frame=frame, page=2, pages=2)
@@ -1600,13 +1606,13 @@ def sheet_wrist():
                     margins=(36, 40, 20, 10))
     s2.scale_label = SCALE_NAME[sc]
     frame_mark(s2, "A", (xs, 0, 0), "P0", 4, 3)
-    s2.ordinate("A", "h", [(xs - 16, 0, 10.5), (xs - 18, 0, -33), (xs - 16.5, 0, -33), (xs, 0, -35.5)], "below")
+    s2.ordinate("A", "h", [(xs - 16, 0, 10.5), (xs - 18, 0, HXB), (xs - 16.5, 0, HXB), (xs, 0, -35.5)], "below")
     s2.ordinate("A", "v", [(20.5, 0, -35.5), (20.5, 0, 10.5)], "left")
     s2.callout("A", s2.on_circle("A", (0, 0, 0), 21, 40), "R21 GAP (TAL-002)", 12, 18)
     s2.add_view("left", wr, "left", (14, 14, 160, 120), scale=1, margins=(36, 30, 30, 6))
-    s2.ordinate("left", "h", [(-16, -10.3, -33), (-16, 10.3, -33)], "below")
-    s2.ordinate("left", "v", [(-16, 10.3, -33), (-16, 0, 0)], "right")
-    s2.callout("left", (20.5, 10.3 + 2.1, -33 - 1), f"2X {CBORE}{DIA}4.2 TO X {fmt(xs - 18)}\n{DIA}2.4 TO POCKET",
+    s2.ordinate("left", "h", [(-16, -HY, HXB), (-16, HY, HXB)], "below")
+    s2.ordinate("left", "v", [(-16, HY, HXB), (-16, 0, 0)], "right")
+    s2.callout("left", (20.5, HY + 2.1, HXB - 1), f"2X {CBORE}{DIA}4.2 TO X {fmt(xs - 18)}\n{DIA}2.4 TO POCKET",
                36, -24)
     s2.iso(wr, (200, 120, 272, 283), max_scale=1)
     s2.features("SECTION A-A AND LEFT VIEW", [
@@ -1635,14 +1641,14 @@ def sheet_gripper():
     point_table(s1, "front", keel + finger, heading="KEEL K AND FINGER F PROFILES (X, Z), Y ±10",
                 tag_offsets=offs)
     s1.ordinate("front", "h", [(0, 0, -9.4), (4, 0, -9.4), (9, 0, ZJ), (33, 0, ZJ), (XJ, 0, ZJ - 18)], "below")
-    s1.ordinate("front", "v", [(0, 0, ZJ - 15.4), (0, 0, ZJ - 10.3), (0, 0, 0), (0, 0, ZJ), (0, 0, ZJ + 10.3),
+    s1.ordinate("front", "v", [(0, 0, ZJ - 15.4), (0, 0, ZJ - HY), (0, 0, 0), (0, 0, ZJ), (0, 0, ZJ + HY),
                                (0, 0, ZJ + 15.4)], "left")
     s1.callout("front", s1.on_circle("front", (XJ, 0, ZJ), 18, 50), "R18", 10, 12)
     s1.callout("front", (30, 0, ZJ + 3), f"HEX WINDOW H(9, 33, {fmt(ZJ)}, 7)\nTHRU (TAL-002)", 50, 46)
     s1.callout("front", (73.5, 0, -1.1), "6X V-NOTCH, PITCH 6, x 72 TO 102\n(x, 0) (x+1.5, -1.6) (x+3, 0)",
                12, 34)
-    s1.callout("front", (XJ - 33 + 1.5, 0, ZJ - 10.3 - 1.5),
-               f"4X {CBORE}{DIA}4.2 TO SEAT, {DIA}2.4 TO POCKET\n-Y FACE X {fmt(XJ - 33)} (SEAT "
+    s1.callout("front", (XJ + HXB + 1.5, 0, ZJ - HY - 1.5),
+               f"4X {CBORE}{DIA}4.2 TO SEAT, {DIA}2.4 TO POCKET\n-Y FACE X {fmt(XJ + HXB)} (SEAT "
                f"{fmt(ta.SHELL_IN + 1.0)}), +Y FACE X {fmt(XJ - 29)} (SEAT {fmt(ta.FRONT_SEAT)})", 70, -30)
     s1.callout("front", (0.9, 0, ZJ + 15.4 - 0.9), "C3 (∥ Y)", -6, 24)
     s1.ordinate("top", "v", [(XJ, -ta.SHELL_OUT, 0), (108, -10, 0), (108, 10, 0), (XJ, ta.SHELL_OUT, 0)], "right")
@@ -1670,14 +1676,16 @@ def sheet_gripper():
         "Grip notches: 6X triangle (x, 0) (x+1.5, -1.6) (x+3, 0), x = 72, 78 ... 102, through Y.",
         f"Roll horn (sheet 2): {DIA}7 centre, x -1 to 7. 4X {DIA}{fmt(M3_HOLE_D)} on {DIA}{fmt(PCD_D)} PCD at 45°, "
         f"x -1 to 3.5, "
-        f"counterbore {DIA}6.5 from x 3.5 to 7 (M3 × 6 from inside the housing); centre opened to {DIA}8.6 "
+        f"counterbore {DIA}6.5 from x 3.5 to 7 (M3 × 6 from inside the housing, with the short leg of a 2 mm "
+        f"hex key); the two counterbores at z {fmt(-HK)} run on to x {fmt(ta.ROLL_CBORE_RUN)}, as grooves in the "
+        f"pocket floor, so those screws can be laid in; centre opened to {DIA}8.6 "
         f"from x 3.5 to 7 (no thin web between the counterbores and the centre hole).",
         f"Case screw holes (TAL-002): +Y face (seat {fmt(ta.FRONT_SEAT)}) at x {fmt(XJ - 29)}, z "
-        f"{fmt(ZJ - 10.3)} and {fmt(ZJ + 10.3)}; -Y face (seat {fmt(ta.SHELL_IN + 1.0)}) at x {fmt(XJ - 33)}, z "
-        f"{fmt(ZJ - 10.3)} and {fmt(ZJ + 10.3)}.",
+        f"{fmt(ZJ - HY)} and {fmt(ZJ + HY)}; -Y face (seat {fmt(ta.SHELL_IN + 1.0)}) at x {fmt(XJ + HXB)}, z "
+        f"{fmt(ZJ - HY)} and {fmt(ZJ + HY)}.",
     ])
     s1.notes(GENERAL + ["Fit the jaw servo from the top, shaft to +Y, with both horns off; then the case screws "
-                        "(2X M2 × 6 on +Y, 2X M2 × 4 on -Y) and refit the horns.",
+                        "(2X M2 × 6 on +Y, 2X M2 × 5 on -Y) and refit the horns.",
                         "The jaw servo's bus plugs come out through the -Y housing wall.",
                         print_note("TAL-106")])
 
@@ -1688,7 +1696,6 @@ def sheet_gripper():
     s2.callout("left", s2.on_circle("left", (0, 0, 0), 15.5, 300), f"{DIA}31 DISC\nC0.6 AT X 4", 14, -16)
     horn_callouts(s2, "left", (0, 0, 0), (0, -1, 0), (0, 0, 1), dx=(-24, 26), dy=(-34, 40),
                   extra=f"\n{CBORE}{DIA}6.5 FROM INSIDE")
-    HK = round(ta.HORN_PCD_R / math.sqrt(2), 2)  # horn hole offset: 4.95
     s2.section("A", g, (0, HK, 0), (0, 1, 0), (1, 0, 0), (14, 14, 272, 122), scale=1.5,
                margins=(36, 36, 10, 6))
     s2.ordinate("A", "h", [(0, 0, -9.4), (3.5, 0, -HK - 3.25), (4, 0, -9.4), (7, 0, -HK - 3.25)], "below")
