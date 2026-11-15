@@ -99,7 +99,7 @@ def hops(cable=None):
     sweep("board -> pan", 0, 0.0, lambda f, a: polyline([pt(f, "talos_arm", board), pt(f, "talos_arm", tunnel_out),
                                                     pt(f, "talos_arm", tunnel_in), plug("pan", f)]))
 
-    # pan -> shoulder: back out of the tunnel, up the back of the column, round the column to the
+    # pan -> shoulder: back out of the tunnel, up the back of the column through its clip, round the column to the
     # clip on the cradle's back face, then to the shoulder servo's plugs
     col_top = (-44.0, 0.0, ta.H_PAN)
     f0 = ta.link_frames((0, 0, 0, 0, 0, 0))
@@ -110,7 +110,8 @@ def hops(cable=None):
         a = pt(f, "talos_arm", col_top)
         clip = pt(f, "shoulder_link", (-17.0, -9.0, 21.0))
         wrap = pan_wrap0 + q  # the loop winds on as the shoulder turns: it can't jump to the other side
-        return (polyline([plug("pan", f), pt(f, "talos_arm", tunnel_in), pt(f, "talos_arm", tunnel_out), a])
+        clip_col = pt(f, "talos_arm", (ta.COLUMN_CLIP[0] - 2.5, ta.COLUMN_CLIP[1], ta.COLUMN_CLIP[2]))
+        return (polyline([plug("pan", f), pt(f, "talos_arm", tunnel_in), pt(f, "talos_arm", tunnel_out), clip_col, a])
                 + helix(a, clip, np.zeros(3), z, wrap, 44.0) + polyline([clip, plug("shoulder", f)]))
     sweep("pan -> shoulder", 0, PAN_RANGE, pan_hop)
 
@@ -161,7 +162,9 @@ def main():
         span = f"{lo:.0f} to {hi:.0f} mm" if hi - lo > 1 else f"{hi:.0f} mm"
         worst = f" (longest at {at:+.0f} deg)" if hi - lo > 1 else ""
         cable = free + 2 * PLUG_BODY
-        print(f"  {'ok  ' if ok else 'LONG'} {name:26s} {cable:.0f} mm cable: needs {span}{worst}; spare {free - hi:+.0f} mm")
+        slack = f"; {free - lo:.0f} mm loose at its shortest" if hi - lo > 1 else ""
+        print(f"  {'ok  ' if ok else 'LONG'} {name:26s} {cable:.0f} mm cable: needs {span}{worst}; "
+              f"spare {free - hi:+.0f} mm{slack}")
     if bad:
         raise SystemExit(f"{bad} runs too long for their cables")
 

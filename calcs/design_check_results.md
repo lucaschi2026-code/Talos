@@ -136,6 +136,18 @@ The idler plates on the upper arm and forearm are a separate part (TAL-110), hel
 | upper_arm_link (shoulder) | 12.2 | 6.1 | 0.49 | 41 |
 | forearm_link (elbow) | 10.0 | 5.0 | 0.40 | 50 |
 
+### Output clevis plates
+
+The output horn's torque reaches the link through the output clevis plate, bending it in its own plane about the joint axis. At the plate's root, where it joins the link, it is a 3.5 mm by h rectangle: stress 6 T / (t h²). The plates stand vertical in every print, so that stress runs along the layers.
+
+| Joint (plate) | Root height h (mm) | Holding, 200 g (N*m) | Stress (MPa) | SF | Stall (N*m) | Stress (MPa) | SF |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| shoulder (upper arm) | 30 | 1.73 | 3.3 | 3.0 | 2.94 | 5.6 | 1.8 |
+| elbow (forearm) | 30 | 1.06 | 2.0 | 5.0 | 2.94 | 5.6 | 1.8 |
+| wrist_flex (wrist) | 24 | 0.43 | 1.3 | 7.8 | 2.94 | 8.8 | 1.1 |
+
+The wrist's root height is its clevis, 2 × 12, without the flat-top extension that makes it taller (so it errs safe). The plates are 3.5 mm thick since they moved out to 19.4 mm, 1 mm clear of the shell. In-plane bending scales with the thickness, not its square, so the 4.0 mm plates had 0.875 of these stresses. Stall is checked against the sustained (creep) limit too, so an SF a little over 1 there still leaves the short-term strength of PLA, several times higher, in hand.
+
 ## 8. Gripper
 
 - Grip force, continuous (1/3 stall): 23 N at mid-jaw, 15 N at the tip.

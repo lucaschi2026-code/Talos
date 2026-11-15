@@ -196,6 +196,8 @@ PLUG_ZONE = (-17.6, -10.6, -10.6, 10.6, -28.5)  # mated plugs + cable bend (x, x
 # plugs) gets PASS_C. The horn openings are R10.8: the R9.6 horns go through with 1.2 to spare.
 FIT_C = 0.3   # set from the TAL-111 gauge: the bare servo slid through the 0.3 window with light
 PASS_C = 0.4  # friction and was snug in 0.2. The notches in that window are 0.4, as here.
+# Printed on a Creality Ender 3 V3 KE, 0.4 mm nozzle, Creality PLA, sliced in Creality Print
+# (0.2 mm layers, 3 perimeters, 20 % infill). Another printer, filament or profile: reprint TAL-111.
 assert abs(SHELL_IN - (BOTTOM_FACE + FIT_C)) < 1e-9, "SHELL_IN must be the bottom face plus FIT_C"
 HORN_OPENING = 10.8
 # Links and gripper: the rib's way in runs under one of the top-face case screws, so both
@@ -428,6 +430,7 @@ def cable_clip(at, rows):
 # ---------------------------------------------------------------- parts
 
 # Waveshare Bus Servo Adapter (A): 42 x 33 mm, 2.5 mm holes on 37 x 28 mm (same board as SO-101)
+COLUMN_CLIP = (-40.0, 0.0, 50.0)  # on the base column's back face, cable along Z
 BOARD = dict(x=(-88.0, -55.0), y=(-21.0, 21.0), z=15.0, holes=((-57.5, 18.5), (-57.5, -18.5),
                                                               (-85.5, 18.5), (-85.5, -18.5)))
 
@@ -455,6 +458,9 @@ def base_parts():
         flute = flute.union(cq.Workplane("XY").sphere(2.6).translate((x, y, z0)))
         flute = flute.union(cq.Workplane("XY").sphere(2.6).translate((x, y, 52)))
         body = body.cut(flute)
+    # clip on the back of the column for the pan -> shoulder cable: it holds the cable off the turntable's
+    # edge, and the service loop above it takes up the slack as the arm pans (cable_check.py)
+    body = body.union(cable_clip(COLUMN_CLIP, ((0, 0, -1), (0, 1, 0), (1, 0, 0))))
     servo_loc = T(0, 0, H_PAN - 18.7)
     body = body.cut(pocket_in(servo_loc)).cut(box(-36, 11, -CASE_HW - FIT_C, CASE_HW + FIT_C, top - 1, top + 5))
     body = body.cut(box(-60, -13, -6, 6, 14.8, 24.5))  # cable tunnel: plug bay -> board deck
