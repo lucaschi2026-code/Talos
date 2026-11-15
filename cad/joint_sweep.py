@@ -21,8 +21,6 @@ import talos_arm as ta
 for fn in ("base_parts", "shoulder_parts", "arm_link", "wrist_parts", "gripper_parts", "moving_jaw",
            "hub_caps", "sts3215"):
     setattr(ta, fn, functools.lru_cache(maxsize=None)(getattr(ta, fn)))
-_arm_link = ta.arm_link
-ta.arm_link = lambda L, **kw: _arm_link(L, **kw) if not kw else _arm_link(L, **kw)
 
 # name, index into the pose tuple, other joints held off zero {index: degrees}, step, furthest angle
 SWEEPS = (("shoulder", 1, {}, 5, 150), ("elbow", 2, {}, 5, 150), ("wrist flex", 3, {}, 5, 150),

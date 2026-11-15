@@ -36,7 +36,14 @@ NAMES = ("mid case", "top case", "bottom case", "motor", "pcb", "gear", "output 
 def real_parts():
     """{name: solid} of the Feetech model's bodies, in the Talos servo frame."""
     solids = cq.importers.importStep(str(REF)).solids().vals()
-    return {name: s.moved(TO_TALOS) for name, s in zip(NAMES, solids)}
+    # the names follow the order of the bodies in the STEP: make sure a re-export can't relabel them
+    assert len(solids) == len(NAMES), f"{REF.name}: {len(solids)} bodies, expected {len(NAMES)}"
+    parts = {name: s.moved(TO_TALOS) for name, s in zip(NAMES, solids)}
+    out, back = parts["output horn"].BoundingBox(), parts["passive horn"].BoundingBox()
+    assert abs(out.xlen - 19.2) < 0.3 and abs(out.ylen - 19.2) < 0.3 and out.zmin > 10, \
+        f"'output horn' is not the 19.2 mm horn on the top face: {out.xlen:.1f} x {out.ylen:.1f}, z from {out.zmin:.1f}"
+    assert back.zmax < -15, f"'passive horn' is not on the bottom face: z to {back.zmax:.1f}"
+    return parts
 
 
 def real_servo(parts=None):
@@ -141,7 +148,7 @@ def measurements(case, horn, passive):
     return rows
 
 
-SLIDE_STEPS = (1, 2, 3, 4.5, 6, 8, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30, 35, 40, 45, 50, 55, 60)  # mm
+SLIDE_STEPS = tuple(sorted((1, 3) + tuple(range(2, 61, 2))))  # mm: no gap over 2 mm, under the 6 mm boss and spline
 HORN_STEPS = (0.5, 1, 1.5, 2, 3, 4, 6, 8, 12, 20, 30)  # mm: a horn's way out through its opening
 
 ENTRY = ta.SERVO_ENTRY
@@ -202,6 +209,23 @@ def fit_report(case, horn, passive):
     return out
 
 
+def gauge_report(case):
+    """[(check, ok, text)]: the real servo, horns off, through every window of the TAL-111 ladder.
+
+    Each window is cut through a slab as long as the servo is wide, so no overlap means the
+    whole case outline fits the window. If every window passes here, a window that stops the
+    printed gauge is the printer's doing, not the design's."""
+    side = case.rotate(cq.Vector(0, 0, 0), cq.Vector(1, 0, 0), -90)  # servo (x, y, z) -> gauge (x, z, -y)
+    out = []
+    for c in ta.GAUGE_LADDER:
+        slab = ta.box(-60, 60, -60, 60, -20, 20)
+        for x0, x1, y0, y1 in ta.gauge_window((c, c + ta.PASS_C - ta.FIT_C)):
+            slab = slab.cut(ta.box(x0, x1, y0, y1, -21, 21))
+        ov = slab.val().intersect(side).Volume()
+        out.append((f"fit gauge window {c:.1f}: real servo passes", ov < 1e-3, f"overlap {ov:.3f} mm3"))
+    return out
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     parts = real_parts()
@@ -222,7 +246,7 @@ def main():
         bad += not ok
         print(f"  {'ok  ' if ok else 'FAIL'} {what}: {txt}")
     print("\nReal servo in every Talos pocket:")
-    for what, ok, txt in fit_report(case, horn, passive):
+    for what, ok, txt in fit_report(case, horn, passive) + gauge_report(case):
         bad += not ok
         print(f"  {'ok  ' if ok else 'FAIL'} {what}: {txt}")
     if bad:

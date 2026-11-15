@@ -116,8 +116,9 @@ def case_holes(P, D, holes, z_land, z_cbore, seat=None, cbore_angles=None):
     out = []
     for x, y in holes:
         out.append(hole(f"M2 case screw clearance at ({x:g}, {y:g})", P((x, y, z_land)), D((0, 0, 1)), M2_CLEAR))
-        out.append(hole(f"M2 case screw c'bore at ({x:g}, {y:g})", P((x, y, z_cbore)), D((0, 0, 1)), M2_CBORE,
-                        **({"angles": cbore_angles(x, y)} if cbore_angles else {})))
+        if z_cbore is not None:  # None: the head sits on a face, no counterbore
+            out.append(hole(f"M2 case screw c'bore at ({x:g}, {y:g})", P((x, y, z_cbore)), D((0, 0, 1)), M2_CBORE,
+                            **({"angles": cbore_angles(x, y)} if cbore_angles else {})))
         if seat is not None:
             sg = 1 if seat > 0 else -1
             out.append(clear(f"driver reaches the M2 case screw at ({x:g}, {y:g})", P((x, y, seat + 0.05 * sg)),
@@ -186,7 +187,7 @@ def shoulder_probes():
           ray("turntable R37", (60, 0, 3), (-1, 0, 0), 60 - 37)]
     pr += horn_pattern((0, 0, 2), "z", "pan horn screw")
     pr += horn_pattern((0, 0, 8), "z", "pan horn screw c'bore", M3_CBORE, keep_off=(180,))
-    pr.append(span("bump channel wall with doubler (0.8)", (0, -ta.SHELL_OUT - ta.DOUBLER + 0.4, 25), (0, 1, 0),
+    pr.append(span("bump channel wall with doubler", (0, -ta.SHELL_OUT - ta.DOUBLER + 0.4, 25), (0, 1, 0),
                    ta.SHELL_OUT + ta.DOUBLER - SV["bump"] - ta.PASS_C))
     pr += [wall("pocket side +", P, D, (-21, 0, 0), (0, 1, 0), SV["half_w"]),
            wall("pocket side -", P, D, (-21, 0, 0), (0, -1, 0), SV["half_w"]),
@@ -196,9 +197,13 @@ def shoulder_probes():
            wall("pocket floor", P, D, (SV["cx"], 8, 0), (-1, 0, 0), SV["half_len"]),
            open_("servo way in (from the top)", P((SV["cx"], 0, 0)), D((1, 0, 0))),
            # the case screws locate the servo: shoulder axis at H_SH
-           span("cheek fused to the cradle wall (no slit)", (8, 21, 13), (0, 1, 0), 25.0 - (SV["top"] + ta.FIT_C))]
-    pr += case_holes(P, D, ta.CASE_FRONT, 17.0, 20.0, seat=18.5)
-    pr += case_holes(P, D, ta.CASE_BACK, -17.5, -20.0, seat=-18.5)
+           span("cheek fused to the cradle wall (no slit)", (8, 21, 13), (0, 1, 0), 25.0 - (SV["top"] + ta.FIT_C)),
+           # the posts beside the shaft stand off the case, so the cradle walls carry the servo's torque
+           ray(f"post +, {ta.POST_IN - ta.CASE_HW:g} off the case", P((-5, 0, 0)), D((0, 1, 0)), ta.POST_IN),
+           ray(f"post -, {ta.POST_IN - ta.CASE_HW:g} off the case", P((-5, 0, 0)), D((0, -1, 0)), ta.POST_IN)]
+    front, back = ta.SHOULDER_SEATS
+    pr += case_holes(P, D, ta.CASE_FRONT, (SV["top"] + ta.FIT_C + front) / 2, front + 1.5, seat=front)
+    pr += case_holes(P, D, ta.CASE_BACK, -(SV["bottom"] + ta.FIT_C + back) / 2, -back - 1.5, seat=-back)
     pr += horn_ways(P, D)
     for k, (x, y) in enumerate(ta.HORN_HOLES):  # fitted from above, before the shoulder servo goes in
         pr.append(clear(f"pan horn screw {k + 1} goes in from above", (x, y, 4.05), (0, 0, 1), KEY_R))
@@ -222,22 +227,30 @@ def link_probes(L, h1, w_mid, h_mid):
            *rib_and_bump(P, D),
            wall("pocket roof", P, D, c, (0, -1, 0), SV["half_w"]),
            open_("servo way in (from below)", P(c), D((0, 1, 0))),
+           # 45 degree lead-in where the way in opens through the bed face: 0.25 outside the opening's
+           # edge, the chamfer is 0.25 up
+           ray(f"lead-in {ta.LEAD_IN:g} x 45 deg round the way in, at the bed face",
+               (L + ta.CASE_X[0] - ta.FIT_C - ta.LEAD_IN / 2, 0, ta.Z_BED - 5), (0, 0, 1), 5 + ta.LEAD_IN / 2),
            ray("shell width +Y (36.8)", (L - 34, 40, 5), (0, -1, 0), 40 - ta.SHELL_OUT),
            ray("shell width -Y (36.8)", (L - 34, -40, 5), (0, 1, 0), 40 - ta.SHELL_OUT),
            ray("doubler face over the bump channel", (L - 25, -40, 0), (0, 1, 0), 40 - ta.SHELL_OUT - ta.DOUBLER),
-           span("bump channel wall with doubler (0.8)", (L - 25, -ta.SHELL_OUT - ta.DOUBLER + 0.4, 0), (0, 1, 0),
+           span("bump channel wall with doubler", (L - 25, -ta.SHELL_OUT - ta.DOUBLER + 0.4, 0), (0, 1, 0),
                 ta.SHELL_OUT + ta.DOUBLER - SV["bump"] - ta.PASS_C),
            ray(f"shell top at {h1 / 2:g}", (L - 12.5, 8, 40), (0, 0, -1), 40 - h1 / 2),
            ray("flat underside at Z_BED", (xm, 8, -40), (0, 0, 1), 40 + ta.Z_BED),
            ray(f"waist top at {h_mid / 2:g}", (xm, 8, 40), (0, 0, -1), 40 - h_mid / 2),
            ray(f"waist width {w_mid:g}", (xm, 40, -10), (0, -1, 0), 40 - w_mid / 2),
            ray("idler plate pocket floor", (24, -21, 0), (0, 1, 0), -ta.CLV_IN + 21),
-           ray("idler plate pocket end (plate 30 + 0.3)", (24, -19.5, 6), (1, 0, 0), 30.3 - 24)]
+           ray("idler plate pocket end (plate 30 + 0.3)", (24, -20.0, 6), (1, 0, 0), 30.3 - 24)]
     for x, z in ta.IDLER_TAB_SCREWS:
         pr.append(hole(f"idler plate M3 pilot at ({x:g}, {z:g})", (x, -15, z), (0, 1, 0), 1.25))
-    seat, bseat = ta.FRONT_SEAT, ta.SHELL_IN + 1.0
+    seat, bseat = ta.FRONT_SEAT, ta.BACK_SEAT
     pr += case_holes(P, D, ta.CASE_FRONT, seat - 0.5, seat + 0.15, seat=seat)
-    pr += case_holes(P, D, ta.CASE_BACK, -(SV["bottom"] + bseat) / 2, -bseat - 0.25, seat=-bseat)
+    # bottom face: the heads sit on pads standing off the wall, so no counterbore
+    pr += case_holes(P, D, ta.CASE_BACK, -(SV["bottom"] + ta.FIT_C + bseat) / 2, None, seat=-bseat)
+    for x, y in ta.CASE_BACK:
+        pr.append(ray(f"head pad face at ({x:g}, {y:g}), seat {bseat:g}", P((x - 1.5, y, -30)), D((0, 0, 1)),
+                      30 - bseat))
     pr += horn_ways(P, D)
     return pr
 
@@ -267,11 +280,16 @@ def wrist_probes():
            ray("cradle end (roll horn face X_ROLL - 2.8)", (80, 14, 5), (-1, 0, 0), 80 - (ta.X_ROLL - 2.8)),
            wall("pocket side +", P, D, (-30, 0, 0), (0, -1, 0), SV["half_w"]),
            wall("pocket side -", P, D, (-30, 0, 0), (0, 1, 0), SV["half_w"]),
-           wall("pocket floor", P, D, (SV["cx"], 0, 0), (-1, 0, 0), SV["half_len"]),
+           wall("pocket floor (a bridge in the print: + BRIDGE_C)", P, D, (SV["cx"], 0, 0), (-1, 0, 0),
+                SV["half_len"], (ta.FIT_C + ta.BRIDGE_C,) * 2),
            wall("pocket back wall", P, D, (-25, 11, 0), (0, 0, -1), SV["bottom"]),
            wall("bump recess in the back wall", P, D, (-24, 0, 0), (0, 0, -1), SV["bump"], PASS),
            open_("servo way in (along the roll axis)", P((SV["cx"], 0, 0)), D((0, 0, 1)))]
-    pr += case_holes(P, D, ta.CASE_BACK, -17.25, -18.6, seat=-18.0)
+    s = ta.WRIST_SEAT
+    pr += case_holes(P, D, ta.CASE_BACK, -(SV["bottom"] + ta.FIT_C + s) / 2, -s - 0.25, seat=-s)
+    # the pair beside the shaft: the one by the plug bay opens into it below its seat
+    pr += case_holes(P, D, ta.CASE_BACK_SHAFT, -(SV["bottom"] + ta.FIT_C + s) / 2, -s - 0.25, seat=-s,
+                     cbore_angles=lambda x, y: (45, 90, 135) if y > 0 else range(0, 360, 45))
     assert abs(P((0, 0, 0))[0] - xs) < 1e-9
     return pr
 
@@ -302,19 +320,24 @@ def gripper_probes():
                       (3.55, y, z), (1, 0, 0), 30.0, 80.0))
         pr.append(clear(f"roll horn screw {k + 1}: hex key's long leg up through the open top",
                         (3.5 + 18, y, z), (0, 0, 1), 1.2))
-    pr.append(span("bump channel wall with doubler (0.8)", (ta.XJ - 25, -ta.SHELL_OUT - ta.DOUBLER + 0.4, ta.ZJ + 14),
+    pr.append(span("bump channel wall with doubler", (ta.XJ - 25, -ta.SHELL_OUT - ta.DOUBLER + 0.4, ta.ZJ + 14),
                    (0, 1, 0), ta.SHELL_OUT + ta.DOUBLER - SV["bump"] - ta.PASS_C))
     c = (SV["cx"], 0, 0)
-    pr += [wall("pocket end, shaft side", P, D, c, (1, 0, 0), SV["half_len"]),
+    pr += [wall("pocket end, shaft side (a bridge in the print: + BRIDGE_C)", P, D, c, (1, 0, 0), SV["half_len"],
+                (ta.FIT_C + ta.BRIDGE_C,) * 2),
            wall("pocket end, far side", P, D, c, (-1, 0, 0), SV["half_len"]),
            wall("pocket face, horn side", P, D, (-22, 11, 0), (0, 0, 1), SV["top"]),
            wall("pocket face, idler side", P, D, (-22, 11, 0), (0, 0, -1), SV["bottom"]),
            *rib_and_bump(P, D, x_rib=-34.5, y=5, x_bump=-29.9),
            wall("pocket floor", P, D, c, (0, 1, 0), SV["half_w"]),
            open_("servo way in (from the top)", P(c), D((0, -1, 0)))]
-    seat, bseat = ta.FRONT_SEAT, ta.SHELL_IN + 1.0
+    seat, bseat = ta.FRONT_SEAT, ta.BACK_SEAT
     pr += case_holes(P, D, ta.CASE_FRONT, seat - 0.5, seat + 0.15, seat=seat)
-    pr += case_holes(P, D, ta.CASE_BACK, -(SV["bottom"] + bseat) / 2, -bseat - 0.25, seat=-bseat)
+    # bottom face: the heads sit on pads standing off the wall, so no counterbore
+    pr += case_holes(P, D, ta.CASE_BACK, -(SV["bottom"] + ta.FIT_C + bseat) / 2, None, seat=-bseat)
+    for x, y in ta.CASE_BACK:
+        pr.append(ray(f"head pad face at ({x:g}, {y:g}), seat {bseat:g}", P((x - 1.5, y, -30)), D((0, 0, 1)),
+                      30 - bseat))
     pr += horn_ways(P, D)
     return pr
 
@@ -337,27 +360,39 @@ def cap_probes():
 
 
 def gauge_probes():
-    _, origins = ta.fit_gauge()
-    pr = []
-    for (c, p), (ox, oy) in zip(ta.GAUGE_CLEAR, origins):
-        length = ta.CASE_X[1] - ta.CASE_X[0]
-        pr += [span(f"window length {length:g} + 2 x {c:g}", (ox + SV["cx"], oy + 5, 4), (1, 0, 0), length + 2 * c),
-               span(f"window thickness 31.9 + 2 x {c:g}", (ox - 8, oy, 4), (0, 1, 0), SV["top"] + SV["bottom"] + 2 * c),
-               span(f"rib notch height {SV['rib']:g} + {p:g}", (ox - 12, oy + 1, 4), (0, 1, 0),
+    layout, _ = ta.gauge_layout()
+    h, z, dp = ta.GAUGE_H, ta.GAUGE_H / 2, ta.PASS_C - ta.FIT_C
+    length = ta.CASE_X[1] - ta.CASE_X[0]
+    pr = [ray(f"gauge thickness {h:g}", (ta.GAUGE_WALL / 2, layout[0][1][1], 20), (0, 0, -1), 20 - h)]
+    for c, (ox, oy), (lx, ly) in layout:
+        p = c + dp
+        w = f"window {c:.1f}:"
+        pr += [span(f"{w} length {length:g} + 2 x {c:g}", (ox + SV["cx"], oy + 5, z), (1, 0, 0), length + 2 * c),
+               span(f"{w} thickness {SV['top'] + SV['bottom']:g} + 2 x {c:g}", (ox - 8, oy, z), (0, 1, 0),
+                    SV["top"] + SV["bottom"] + 2 * c),
+               span(f"{w} rib notch {SV['rib']:g} + {p:g}", (ox - 12, oy + 1, z), (0, 1, 0),
                     SV["rib"] + p + SV["bottom"] + c),
-               span(f"idler boss notch 6 + 2 x {p:g}", (ox, oy - 17.5, 4), (1, 0, 0), 6 + 2 * p),
-               ray("gauge height 8", (1.5, oy, 20), (0, 0, -1), 12)]
+               span(f"{w} bump notch {SV['bump']:g} + {p:g} (to the rib notch)", (ox - 24, oy - 1, z), (0, 1, 0),
+                    SV["bump"] + p + SV["rib"] + p),
+               span(f"{w} spline notch 6 + 2 x {p:g}", (ox, oy + 16.5, z), (1, 0, 0), 2 * ta.SPLINE[0] + 2 * p),
+               span(f"{w} idler boss notch 6 + 2 x {p:g}", (ox, oy - 17.5, z), (1, 0, 0), 2 * ta.BOSS[0] + 2 * p)]
     return pr
+
+
+def coupon_probes(part_no, link_pr):
+    """The parent link's probes that fall inside the coupon: same frame, same geometry."""
+    x0, x1 = ta.COUPON_CUT[part_no]
+    return [pr for pr in link_pr if x0 + 1 <= pr[2][0] <= x1 - 1]
 
 
 def probes():
     """{part no: [probe, ...]} in each part's own frame."""
     f = ta.FOREARM
-    return {"TAL-101": base_probes(), "TAL-102": shoulder_probes(),
-            "TAL-103": link_probes(ta.L1, 30.8, 34.0, 25.0),
-            "TAL-104": link_probes(ta.L2, f["h1"], f["w_mid"], f["h_mid"]),
+    upper, fore = link_probes(ta.L1, 30.8, 34.0, 25.0), link_probes(ta.L2, f["h1"], f["w_mid"], f["h_mid"])
+    return {"TAL-101": base_probes(), "TAL-102": shoulder_probes(), "TAL-103": upper, "TAL-104": fore,
             "TAL-105": wrist_probes(), "TAL-106": gripper_probes(), "TAL-107": jaw_probes(),
-            "TAL-108": cap_probes(), "TAL-110": idler_probes(), "TAL-111": gauge_probes()}
+            "TAL-108": cap_probes(), "TAL-110": idler_probes(), "TAL-111": gauge_probes(),
+            "TAL-112": coupon_probes("TAL-112", upper), "TAL-113": coupon_probes("TAL-113", fore)}
 
 
 # ---------------------------------------------------------------- measuring
