@@ -43,8 +43,8 @@ STEP_ZERO = ROOT / "cad" / "talos_arm_zero.step"
 # Joint limits in degrees, in the model convention (see cad/talos_arm.py).
 # Shoulder, elbow, wrist flex, gripper: CAD collision sweep, calcs/design_check_results.md section 2.
 # Pan and roll have no hard stop: software cable limits from cad/README.md (Wiring).
-LIMITS_DEG = {"pan": (-110, 110), "shoulder": (-100, 100), "elbow": (-105, 105),
-              "wrist_flex": (-105, 95), "wrist_roll": (-150, 150), "gripper": (0, 115)}
+LIMITS_DEG = {"pan": (-110, 110), "shoulder": (-100, 100), "elbow": (-100, 100),
+              "wrist_flex": (-100, 95), "wrist_roll": (-150, 150), "gripper": (0, 115)}
 
 # STS3215 values from SO-ARM100 Simulation/SO101/so101_new_calib.xml, which uses the same servo.
 # Not measured on Talos. Stall torque is the project's own 2.94 N*m (30 kg*cm at 12 V).

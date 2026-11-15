@@ -33,9 +33,29 @@ STRAIGHT_OUT = np.radians([0, 90, 0, 0, 0, 0])
 READY = np.radians(cad["POSES"]["ready"])
 FAST = "--fast" in sys.argv   # one block width instead of seven
 
-# Published in calcs/design_check_results.md
-EXPECT_MASS_G = {"moving": 529.0, "upper_arm_link": 115, "forearm_link": 119, "gripper+jaw": 103}
-EXPECT_TORQUE = {"shoulder": (0.96, 1.75), "elbow": (0.51, 1.07), "wrist_flex": (0.14, 0.43)}
+
+def read_results(path):
+    """Expected values, read from calcs/design_check_results.md so they can't drift from the calcs."""
+    text = path.read_text(encoding="utf-8")
+    rows = {}
+    for line in text.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 3 and line.startswith("|"):
+            rows.setdefault(cells[0], cells[1:])
+    total = lambda link: float(rows[link][2])
+    mass = {"moving": float(re.search(r"Moving mass above the base: ([\d.]+) g", text).group(1)),
+            "upper_arm_link": total("upper_arm_link"), "forearm_link": total("forearm_link"),
+            "gripper+jaw": total("gripper_link")}   # the jaw's printed mass is counted in gripper_link
+    torque = {j: (float(rows[j][0]), float(rows[j][1])) for j in ("shoulder", "elbow", "wrist_flex")}
+    sweep = text[text.index("## 2. Joint ranges"):]
+    limits = {}
+    for j in ("shoulder", "elbow", "wrist_flex", "gripper"):
+        lo, hi = re.search(rf"^\| {j} \| (-?\d+) \| (-?\d+) \|", sweep, re.M).groups()
+        limits[j] = (float(lo), float(hi))
+    return mass, torque, limits
+
+
+EXPECT_MASS_G, EXPECT_TORQUE, EXPECT_LIMITS = read_results(ROOT / "calcs" / "design_check_results.md")
 
 lines, failures = [], []
 
@@ -140,8 +160,12 @@ def part_a(m, d):
     check("Build plan R2: reach from base axis", np.hypot(*tip[:2]) * 1000 >= 350,
           f"{np.hypot(*tip[:2]) * 1000:.0f} mm, needs at least 350 mm")
 
-    ok = all(np.allclose(np.degrees(m.jnt_range[m.joint(j).id]), LIMITS_DEG[j]) for j in JOINTS)
-    check("Joint limits", ok, "match the CAD sweep and cable limits")
+    # Swept joints against the calcs' CAD sweep; pan and roll have no stop, so their cable limits come from LIMITS_DEG.
+    model_deg = {j: tuple(np.degrees(m.jnt_range[m.joint(j).id])) for j in JOINTS}
+    off = [f"{j} {model_deg[j][0]:.0f}/{model_deg[j][1]:.0f} vs {lim[0]:.0f}/{lim[1]:.0f}"
+           for j, lim in EXPECT_LIMITS.items() if not np.allclose(model_deg[j], lim)]
+    off += [j for j in ("pan", "wrist_roll") if not np.allclose(model_deg[j], LIMITS_DEG[j])]
+    check("Joint limits", not off, "; ".join(off) or "match the CAD sweep and cable limits")
 
     set_pose(m, d, np.zeros(6))
     z0 = d.site("tip").xpos[2]

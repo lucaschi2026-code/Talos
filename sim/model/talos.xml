@@ -127,6 +127,8 @@
     <mesh name="gripper_link__hull6" file="collision/gripper_link__hull6.stl"/>
     <mesh name="gripper_link__hull7" file="collision/gripper_link__hull7.stl"/>
     <mesh name="gripper_link__hull8" file="collision/gripper_link__hull8.stl"/>
+    <mesh name="gripper_link__hull9" file="collision/gripper_link__hull9.stl"/>
+    <mesh name="gripper_link__hull10" file="collision/gripper_link__hull10.stl"/>
     <mesh name="moving_jaw__graphite" file="visual/moving_jaw__graphite.stl"/>
     <mesh name="moving_jaw__horn" file="visual/moving_jaw__horn.stl"/>
     <mesh name="moving_jaw__steel" file="visual/moving_jaw__steel.stl"/>
@@ -142,6 +144,7 @@
     <mesh name="moving_jaw__hull9" file="collision/moving_jaw__hull9.stl"/>
     <mesh name="moving_jaw__hull10" file="collision/moving_jaw__hull10.stl"/>
     <mesh name="moving_jaw__hull11" file="collision/moving_jaw__hull11.stl"/>
+    <mesh name="moving_jaw__hull12" file="collision/moving_jaw__hull12.stl"/>
   </asset>
   <visual>
     <global offwidth="1600" offheight="1200" azimuth="135" elevation="-20"/>
@@ -152,7 +155,7 @@
     <light pos="0.4 -0.4 1.2" dir="-0.3 0.3 -1" diffuse="0.5 0.5 0.5"/>
     <geom name="table" type="plane" size="1 1 0.05" material="table" contype="2" conaffinity="11" friction="0.3 0.005 0.0001" condim="4"/>
     <body name="base">
-      <inertial pos="-0.009022 0 0.02677" mass="0.225532" fullinertia="0.000184333 0.00028927 0.000320084 -0 -0.000015583 -0"/>
+      <inertial pos="-0.009169 0 0.026731" mass="0.225535" fullinertia="0.000184297 0.000289699 0.000321244 -0 -0.000015017 -0"/>
       <geom class="visual" mesh="base__pcb" material="pcb"/>
       <geom class="visual" mesh="base__plug" material="plug"/>
       <geom class="visual" mesh="base__servo" material="servo"/>
@@ -166,7 +169,7 @@
       <geom class="collision" mesh="base__hull5"/>
       <body name="shoulder_link" pos="0 0 0.062">
         <joint name="pan" class="sts3215" axis="0 0 1" range="-1.919862 1.919862"/>
-        <inertial pos="-0.000031 -0.00007 0.025227" mass="0.099917" fullinertia="0.00004284 0.000039629 0.000028525 -0.000000027 -0.000000013 0.000000011"/>
+        <inertial pos="-0.00003 -0.000189 0.024992" mass="0.097815" fullinertia="0.000040799 0.000037749 0.000027334 -0.000000026 -0.000000012 0.000000177"/>
         <geom class="visual" mesh="shoulder_link__horn" material="horn"/>
         <geom class="visual" mesh="shoulder_link__plug" material="plug"/>
         <geom class="visual" mesh="shoulder_link__servo" material="servo"/>
@@ -188,7 +191,7 @@
         <geom class="collision" mesh="shoulder_link__hull13"/>
         <body name="upper_arm_link" pos="0 0 0.046" quat="0.707107 0 -0.707107 0">
           <joint name="shoulder" class="sts3215" axis="0 1 0" range="-1.745329 1.745329"/>
-          <inertial pos="0.081939 0.000178 0.00032" mass="0.114529" fullinertia="0.000022258 0.000156898 0.000163693 0.00000223 -0.0000003 0.000000007"/>
+          <inertial pos="0.080997 0.000097 0.000214" mass="0.113132" fullinertia="0.000021609 0.000148874 0.000155184 0.000002971 -0.000002461 -0.000000008"/>
           <geom class="visual" mesh="upper_arm_link__graphite" material="graphite"/>
           <geom class="visual" mesh="upper_arm_link__horn" material="horn"/>
           <geom class="visual" mesh="upper_arm_link__plug" material="plug"/>
@@ -210,8 +213,8 @@
           <geom class="collision" mesh="upper_arm_link__hull12"/>
           <geom class="collision" mesh="upper_arm_link__hull13"/>
           <body name="forearm_link" pos="0.116 0 0">
-            <joint name="elbow" class="sts3215" axis="0 1 0" range="-1.832596 1.832596"/>
-            <inertial pos="0.095366 0.000174 0.000327" mass="0.119241" fullinertia="0.000022875 0.000224373 0.000231085 0.000002661 -0.00000038 0.000000007"/>
+            <joint name="elbow" class="sts3215" axis="0 1 0" range="-1.745329 1.745329"/>
+            <inertial pos="0.09388 0.000087 0.000012" mass="0.118809" fullinertia="0.000022609 0.000216263 0.000222376 0.000003422 -0.000003895 -0.000000011"/>
             <geom class="visual" mesh="forearm_link__graphite" material="graphite"/>
             <geom class="visual" mesh="forearm_link__horn" material="horn"/>
             <geom class="visual" mesh="forearm_link__plug" material="plug"/>
@@ -233,8 +236,8 @@
             <geom class="collision" mesh="forearm_link__hull12"/>
             <geom class="collision" mesh="forearm_link__hull13"/>
             <body name="wrist_link" pos="0.135 0 0">
-              <joint name="wrist_flex" class="sts3215" axis="0 1 0" range="-1.832596 1.658063"/>
-              <inertial pos="0.037613 0.000322 -0.011027" mass="0.092709" fullinertia="0.000029381 0.000040932 0.000032944 0.000001235 0.00000421 -0.000000386"/>
+              <joint name="wrist_flex" class="sts3215" axis="0 1 0" range="-1.745329 1.658063"/>
+              <inertial pos="0.038283 0.000679 -0.011472" mass="0.091873" fullinertia="0.000029147 0.000038735 0.000029583 0.000002479 0.000003854 -0.000000758"/>
               <geom class="visual" mesh="wrist_link__graphite" material="graphite"/>
               <geom class="visual" mesh="wrist_link__horn" material="horn"/>
               <geom class="visual" mesh="wrist_link__plug" material="plug"/>
@@ -257,7 +260,7 @@
               <geom class="collision" mesh="wrist_link__hull13"/>
               <body name="gripper_link" pos="0.063 0 0">
                 <joint name="wrist_roll" class="sts3215" axis="1 0 0" range="-2.617994 2.617994"/>
-                <inertial pos="0.034739 -0.000109 0.003575" mass="0.092186" fullinertia="0.000016135 0.000049039 0.000049353 -0.000000135 0.000004985 0.000000024"/>
+                <inertial pos="0.034191 -0.000197 0.003155" mass="0.089784" fullinertia="0.000014967 0.000048353 0.000048863 -0.000000165 0.000005385 0.00000003"/>
                 <geom class="visual" mesh="gripper_link__horn" material="horn"/>
                 <geom class="visual" mesh="gripper_link__plug" material="plug"/>
                 <geom class="visual" mesh="gripper_link__servo" material="servo"/>
@@ -272,12 +275,14 @@
                 <geom class="finger_hull" mesh="gripper_link__hull6"/>
                 <geom class="finger_hull" mesh="gripper_link__hull7"/>
                 <geom class="finger_hull" mesh="gripper_link__hull8"/>
+                <geom class="finger_hull" mesh="gripper_link__hull9"/>
+                <geom class="finger_hull" mesh="gripper_link__hull10"/>
                 <geom name="pad_fixed" class="pad" pos="0.087 0 -0.003" size="0.021 0.01 0.0025"/>
                 <site name="tool" pos="0.088 0.0 0.0" size="0.004" rgba="1 0.8 0 1"/>
                 <site name="tip" pos="0.106 0.0 0.0" size="0.003" rgba="1 0.4 0 1"/>
                 <body name="moving_jaw" pos="0.042 0 0.006">
                   <joint name="gripper" class="sts3215" axis="0 -1 0" range="0.000000 2.007129"/>
-                  <inertial pos="0.031289 0.006587 0.001032" mass="0.010663" fullinertia="0.000001375 0.000003152 0.000004058 0.000001181 0.00000006 0.000000003"/>
+                  <inertial pos="0.031625 0.0064 0.001038" mass="0.010606" fullinertia="0.000001353 0.000003074 0.000003972 0.000001146 0.000000063 0.000000003"/>
                   <geom class="visual" mesh="moving_jaw__graphite" material="graphite"/>
                   <geom class="visual" mesh="moving_jaw__horn" material="horn"/>
                   <geom class="visual" mesh="moving_jaw__steel" material="steel"/>
@@ -293,6 +298,7 @@
                   <geom class="finger_hull" mesh="moving_jaw__hull9"/>
                   <geom class="finger_hull" mesh="moving_jaw__hull10"/>
                   <geom class="finger_hull" mesh="moving_jaw__hull11"/>
+                  <geom class="finger_hull" mesh="moving_jaw__hull12"/>
                   <geom name="pad_moving" class="pad" pos="0.047 0 -0.003" size="0.017 0.01 0.0025"/>
                 </body>
               </body>
@@ -308,8 +314,8 @@
   <actuator>
     <position name="pan" joint="pan" class="sts3215" ctrlrange="-1.919862 1.919862"/>
     <position name="shoulder" joint="shoulder" class="sts3215" ctrlrange="-1.745329 1.745329"/>
-    <position name="elbow" joint="elbow" class="sts3215" ctrlrange="-1.832596 1.832596"/>
-    <position name="wrist_flex" joint="wrist_flex" class="sts3215" ctrlrange="-1.832596 1.658063"/>
+    <position name="elbow" joint="elbow" class="sts3215" ctrlrange="-1.745329 1.745329"/>
+    <position name="wrist_flex" joint="wrist_flex" class="sts3215" ctrlrange="-1.745329 1.658063"/>
     <position name="wrist_roll" joint="wrist_roll" class="sts3215" ctrlrange="-2.617994 2.617994"/>
     <position name="gripper" joint="gripper" class="sts3215" ctrlrange="0.000000 2.007129"/>
   </actuator>
