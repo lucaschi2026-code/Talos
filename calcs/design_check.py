@@ -40,7 +40,7 @@ INFILL = 0.20             # sparse infill fraction
 E_PLA = 2.3e3             # N/mm^2, printed PLA, conservative
 SIGMA_ALLOW = 10.0        # N/mm^2, sustained bending in printed PLA (creep-limited)
 BEARING_ALLOW = 20.0      # N/mm^2, screw bearing on a printed hole
-HORN_SCREW_R = 6.93       # mm, horn screw circle radius (reference servo model)
+HORN_SCREW_R = 7.0        # mm, horn screw circle radius (Feetech STS3215 horn, 14 mm circle)
 HORN_SCREW_D = 3.0        # mm, M3 (the horn holes are 2.5 mm tapping size)
 M_BOARD = 10.0            # g, bus servo adapter board (fixed, in the base)
 MU_GRIP = 0.3             # friction, PLA jaw on a typical object
@@ -269,15 +269,19 @@ def section(shape, x, delta=0.2):
     A = sum(face_props(f, 0)[0] for f in faces)
     zc = sum(face_props(f, 0)[1] for f in faces) / A
     I_solid = sum(face_props(f, zc)[2] for f in faces)
-    I_core = 0.0
-    try:  # core inside the printed perimeters only carries infill
-        for f in faces:
+    I_eff = 0.0
+    for f in faces:  # the core inside the printed perimeters only carries infill
+        I_f = face_props(f, zc)[2]
+        try:
             outer = f.outerWire().offset2D(-T_SHELL)[0]
             inner = [w.offset2D(T_SHELL)[0] for w in f.innerWires()]
-            I_core += face_props(cq.Face.makeFromWires(outer, inner), zc)[2]
-        I_eff = (I_solid - I_core) + INFILL * I_core
-    except Exception:
-        I_eff = 0.6 * I_solid
+            I_core = face_props(cq.Face.makeFromWires(outer, inner), zc)[2]
+            I_eff += (I_f - I_core) + INFILL * I_core
+        except Exception:
+            # No core could be offset inside this face. A wall up to two perimeters thick has
+            # none (it prints solid); anything thicker gets a flat 0.6, on that face only.
+            wall = 2 * f.Area() / sum(e.Length() for e in f.Edges())
+            I_eff += I_f if wall <= 2 * T_SHELL + 0.6 else 0.6 * I_f
     zs = [v.Z for f in faces for v in f.Vertices()]
     c = max(max(zs) - zc, zc - min(zs))
     return dict(A=A, I=I_solid, I_eff=I_eff, c=c)
@@ -428,6 +432,14 @@ def main():
         for k, (lo, hi) in ranges.items():
             w(f"| {k} | {lo} | {hi} | {hi - lo} |")
         w("| pan, wrist_roll | no mechanical stop | | servo 0-360 deg, cable-limited |\n")
+        w("What stops each pitch joint one step (5 deg) past its limit, from `../cad/joint_sweep.py`:\n")
+        w("- shoulder ±105: the upper arm meets the shoulder (about 175 mm3), and its idler plate "
+          "touches the shoulder servo's plugs (1.4 mm3).")
+        w("- elbow ±105: the forearm's idler plate touches the elbow servo's plugs (1.4 mm3).")
+        w("- wrist flex -105: the wrist touches the wrist flex servo's plugs (1.4 mm3).")
+        w("- wrist flex +100: the wrist meets the forearm (149 mm3).\n")
+        w("The plug touches are small: the plug model is a padded box. ±100 is kept on purpose, "
+          "since SO-101's elbow is ±97. Set the software limits inside these ranges.\n")
 
     # --- payload envelope
     w("## 3. Payload envelope\n")
@@ -539,7 +551,7 @@ def main():
     w("## 7. Horn screw bearing\n")
     w("All joint torque goes through the output horn's 4 screws (the idler side only "
       "supports). Bearing stress on the printed clevis plate:\n")
-    t_plate = ta.CLV_OUT - ta.CLV_IN
+    t_plate = ta.CLV_OUT - ta.HORN_FACE  # the screws bear on the plate and the pad round them
     w("| Joint | Peak torque (N*m) | Force per screw (N) | Bearing stress (MPa) | Safety factor |")
     w("| --- | --- | --- | --- | --- |")
     for joint, tau in (("shoulder (servo stall)", TAU_STALL),
@@ -547,8 +559,22 @@ def main():
         F = tau / (4 * HORN_SCREW_R / 1000)
         sb = F / (HORN_SCREW_D * t_plate)
         w(f"| {joint} | {tau:.2f} | {F:.0f} | {sb:.1f} | {BEARING_ALLOW/sb:.1f} |")
-    w(f"\nPlate thickness {t_plate:.1f} mm, M{HORN_SCREW_D:.0f} screws on a {2*HORN_SCREW_R:.0f} mm "
+    w(f"\nPlate and pad {t_plate:.1f} mm thick at the screws, M{HORN_SCREW_D:.0f} screws on a {2*HORN_SCREW_R:.0f} mm "
       f"circle, allowable {BEARING_ALLOW:.0f} MPa.\n")
+    # separate idler plates (TAL-110): two M3 into the beam; worst case they carry the whole joint reaction
+    n_tab = len(ta.IDLER_TAB_SCREWS)
+    w("The idler plates on the upper arm and forearm are a separate part (TAL-110), held by "
+      f"{n_tab} M3 screws into the beam. They only support the passive horn, so worst case "
+      "they carry the whole joint reaction (everything beyond the joint plus the payload), "
+      "doubled for dynamics:\n")
+    w("| Idler plate | Joint reaction x2 (N) | Force per screw (N) | Bearing stress (MPa) | Safety factor |")
+    w("| --- | --- | --- | --- | --- |")
+    for link, joint in (("upper_arm_link", "shoulder"), ("forearm_link", "elbow")):
+        idx = ta.LINKS.index(link)
+        F = 2 * (sum(link_mass(parts, l) for l in ta.LINKS[idx:]) + PAYLOAD) * G
+        sb = F / n_tab / (HORN_SCREW_D * t_plate)
+        w(f"| {link} ({joint}) | {F:.1f} | {F/n_tab:.1f} | {sb:.2f} | {BEARING_ALLOW/sb:.0f} |")
+    w("")
 
     # --- gripper
     w("## 8. Gripper\n")
@@ -608,6 +634,63 @@ def main():
         w(f"| {L2:.0f}{mark} | {reach:.0f} | {sh:.2f} | {el:.2f} | {el/LIMIT:.2f}x |")
     ta.L2 = L2_design
     w("")
+
+    # --- servo mounts
+    w("## 11. Servo mounts\n")
+    w("### Shoulder cradle\n")
+    sh_shape = next(p["shape"] for p in parts if p["name"] == "shoulder")  # in its own link frame
+    z_post_top = sh_shape.BoundingBox().zmax
+    z_screws = ta.H_SH + (ta.CASE_FRONT[0][0] + ta.CASE_BACK[0][0]) / 2
+    z_root = 6.0  # turntable top
+    # turning about its case screws, the case meets whatever is closest in angle: the cradle walls' top
+    # edge (FIT_C off) or the posts beside the shaft (POST_IN - CASE_HW off)
+    tilt_cradle = ta.FIT_C / (ta.CRADLE_TOP - z_screws)
+    tilt_post = (ta.POST_IN - ta.CASE_HW) / (z_post_top - z_screws)
+    w("The shoulder servo's reaction torque is a couple between its case screws, low in the cradle, and "
+      "whatever its case bears on higher up. Turning about the screws, it reaches the top of the cradle's "
+      f"side walls after {1000 * tilt_cradle:.1f} mrad and the posts beside the shaft after "
+      f"{1000 * tilt_post:.1f} mrad, so the cradle carries it"
+      + ("" if tilt_cradle < tilt_post else " (NO: the posts are reached first)") + ". The cradle's two "
+      "long walls (±Y) take that force in their own plane, as cantilevers from the turntable. Their bending "
+      "stress runs across the layer lines (the shoulder prints turntable down), so it is checked against "
+      "the same allowable as the links. The -Y wall's doubler is left out.\n")
+    w("| Load | Torque (N*m) | Force at the cradle top (N) | Root moment (N*m) | Stress (MPa) | Safety factor |")
+    w("| --- | --- | --- | --- | --- | --- |")
+    walls_t = (ta.SHELL_OUT - ta.TOP_FACE - ta.FIT_C) + (ta.SHELL_OUT - ta.SHELL_IN)
+    depth = 34.0  # cradle length along X
+    I_walls, c_walls = walls_t * depth ** 3 / 12, depth / 2
+    for lbl, tau in (("holding, no payload", static["shoulder"][0]), ("holding, 200 g", static["shoulder"][1]),
+                     ("servo stall", TAU_STALL)):
+        F = tau / ((ta.CRADLE_TOP - z_screws) / 1000)
+        M = F * (ta.CRADLE_TOP - z_root) / 1000
+        sig = M * 1000 * c_walls / I_walls
+        w(f"| {lbl} | {tau:.2f} | {F:.0f} | {M:.2f} | {sig:.1f} | {SIGMA_ALLOW/sig:.1f} |")
+    w(f"\nCase screws at z {z_screws:.1f}, cradle top at {ta.CRADLE_TOP:g}, root at {z_root:g}; the ±Y walls are "
+      f"{walls_t:.1f} mm thick together and {depth:g} mm long. Allowable {SIGMA_ALLOW:.0f} MPa sustained. The "
+      f"posts stand {ta.POST_IN - ta.CASE_HW:g} mm off the case (the first design had 0.5 mm, so the posts took "
+      "the torque and reached 14 MPa at stall).\n")
+    w("### Pan servo case screws\n")
+    w(f"The pan servo carries the {Mot_h:.2f} N*m overturning moment into the base through its bottom face "
+      "and its case screws. The servo tips about an edge of its bottom face; the screws on the far side "
+      "hold it down. The arm pans, so the moment can point any way.\n")
+    w("| Tipping about | Far pair only, per screw (N) | Both pairs, per screw (N) |")
+    w("| --- | --- | --- |")
+    far, near = ta.CASE_BACK[0][0], ta.CASE_BACK_SHAFT[0][0]
+    hy, M = ta.CASE_BACK[0][1], Mot_h * 1000
+    worst4 = 0.0
+    for lbl, lev2, lev4 in (
+            ("the shaft-side edge of the bottom face", [ta.FACE_X - far] * 2,
+             [ta.FACE_X - far] * 2 + [ta.FACE_X - near] * 2),
+            ("the far end", [far - ta.CASE_X[0]] * 2, [far - ta.CASE_X[0]] * 2 + [near - ta.CASE_X[0]] * 2),
+            ("a long side", [ta.CASE_HW - hy, ta.CASE_HW + hy], [ta.CASE_HW - hy, ta.CASE_HW + hy] * 2)):
+        f2 = M * max(lev2) / sum(d * d for d in lev2)
+        f4 = M * max(lev4) / sum(d * d for d in lev4)
+        worst4 = max(worst4, f4)
+        w(f"| {lbl} | {f2:.0f} | {f4:.0f} |")
+    seat = math.pi * (ta.SCREW[2]["head_r"] ** 2 - ta.SCREW[2]["clear"] ** 2)
+    w(f"\nWith four screws the worst is {worst4:.0f} N on an M2, {worst4/seat:.1f} MPa under its head "
+      f"(allowable {BEARING_ALLOW:.0f} MPa). With only the far pair, a moment that lifts the shaft end has "
+      f"a few millimetres of lever, so the servo rocks in its {ta.FIT_C:g} mm clearance instead of being held.\n")
 
     (HERE / "design_check_results.md").write_text("\n".join(out), encoding="utf-8")
     print("\n".join(out))

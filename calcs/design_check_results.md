@@ -9,14 +9,14 @@ Printed parts: PLA 1.24 g/cm3, 1.2 mm perimeters/skins, 20% infill. Servos: 55 g
 | Link | Printed (g) | Servo (g) | Total (g) |
 | --- | --- | --- | --- |
 | base (fixed) | 155 | 61 | 216 |
-| shoulder_link | 39 | 61 | 100 |
-| upper_arm_link | 54 | 61 | 115 |
+| shoulder_link | 37 | 61 | 98 |
+| upper_arm_link | 52 | 61 | 113 |
 | forearm_link | 58 | 61 | 119 |
-| wrist_link | 32 | 61 | 93 |
-| gripper_link | 42 | 61 | 103 |
-| **total** | | | **745** |
+| wrist_link | 31 | 61 | 92 |
+| gripper_link | 39 | 61 | 100 |
+| **total** | | | **738** |
 
-Moving mass above the base: 529 g.
+Moving mass above the base: 522 g.
 
 ## 1. Static holding torque, arm straight out (worst case)
 
@@ -24,14 +24,14 @@ Limit: 0.98 N*m continuous (1/3 of 2.94 N*m stall). Payload 200 g at mid-jaw (15
 
 | Joint | No payload (N*m) | With payload (N*m) | % stall | vs limit |
 | --- | --- | --- | --- | --- |
-| shoulder | 0.96 | 1.75 | 59 % | OVER (1.78x) |
-| elbow | 0.51 | 1.07 | 36 % | OVER (1.09x) |
-| wrist_flex | 0.14 | 0.43 | 15 % | OK (0.44x) |
+| shoulder | 0.94 | 1.73 | 59 % | OVER (1.77x) |
+| elbow | 0.50 | 1.06 | 36 % | OVER (1.08x) |
+| wrist_flex | 0.13 | 0.43 | 15 % | OK (0.44x) |
 | wrist_roll (worst roll angle) | | 0.004 | 0.1 % | OK |
 
-Payload held at the very tip instead: shoulder 1.78 N*m.
+Payload held at the very tip instead: shoulder 1.77 N*m.
 
-The payload is 0.79 N*m of the shoulder load (45 %).
+The payload is 0.79 N*m of the shoulder load (46 %).
 
 ### Against the earlier `torque_check.m` model
 
@@ -40,17 +40,17 @@ The payload is 0.79 N*m of the shoulder load (45 %).
 | Upper arm L1 | 120 mm | 116 mm |
 | Forearm L2 | 120 mm | 135 mm |
 | Wrist flex -> tip | 160 mm | 169 mm |
-| Moving links (4) | 385 g | 429 g |
-| Shoulder, 200 g payload | 1.62 N*m | 1.75 N*m |
-| Elbow, 200 g payload | 0.96 N*m | 1.07 N*m |
+| Moving links (4) | 385 g | 424 g |
+| Shoulder, 200 g payload | 1.62 N*m | 1.73 N*m |
+| Elbow, 200 g payload | 0.96 N*m | 1.06 N*m |
 
 Lumped inputs to paste into `torque_check.m` (per-link mass incl. servo, CoM distance from the link's own joint, arm straight):
 
 ```
-upper arm + elbow servo      m = 0.115 kg, CoM   81.9 mm from shoulder axis
-forearm + wrist-flex servo   m = 0.119 kg, CoM   95.4 mm from elbow axis
-wrist + wrist-roll servo     m = 0.093 kg, CoM   37.6 mm from wrist_flex axis
-gripper + jaw servo          m = 0.103 kg, CoM  101.7 mm from wrist_flex axis
+upper arm + elbow servo      m = 0.113 kg, CoM   81.0 mm from shoulder axis
+forearm + wrist-flex servo   m = 0.119 kg, CoM   93.9 mm from elbow axis
+wrist + wrist-roll servo     m = 0.092 kg, CoM   38.3 mm from wrist_flex axis
+gripper + jaw servo          m = 0.100 kg, CoM  101.4 mm from wrist_flex axis
 ```
 
 ![Shoulder torque vs elevation](shoulder_torque_cad.png)
@@ -62,10 +62,19 @@ Swept in 5 deg steps until any solid overlaps by more than 1 mm3. Angles in the 
 | Joint | Min (deg) | Max (deg) | Span (deg) |
 | --- | --- | --- | --- |
 | shoulder | -100 | 100 | 200 |
-| elbow | -105 | 105 | 210 |
-| wrist_flex | -105 | 95 | 200 |
+| elbow | -100 | 100 | 200 |
+| wrist_flex | -100 | 95 | 195 |
 | gripper | 0 | 115 | 115 |
 | pan, wrist_roll | no mechanical stop | | servo 0-360 deg, cable-limited |
+
+What stops each pitch joint one step (5 deg) past its limit, from `../cad/joint_sweep.py`:
+
+- shoulder ±105: the upper arm meets the shoulder (about 175 mm3), and its idler plate touches the shoulder servo's plugs (1.4 mm3).
+- elbow ±105: the forearm's idler plate touches the elbow servo's plugs (1.4 mm3).
+- wrist flex -105: the wrist touches the wrist flex servo's plugs (1.4 mm3).
+- wrist flex +100: the wrist meets the forearm (149 mm3).
+
+The plug touches are small: the plug model is a padded box. ±100 is kept on purpose, since SO-101's elbow is ±97. Set the software limits inside these ranges.
 
 ## 3. Payload envelope
 
@@ -73,9 +82,9 @@ Largest payload that keeps shoulder, elbow and wrist under the continuous limit,
 
 | Task | Reachable radius (mm) | 200 g OK out to (mm) |
 | --- | --- | --- |
-| top-down pick, object centre 25 mm above table | 140 - 235 | 190 |
-| side grasp, object centre 45 mm above table | 295 - 390 | never |
-| horizontal reach at shoulder height | 305 - 400 | never |
+| top-down pick, object centre 25 mm above table | 150 - 235 | 195 |
+| side grasp, object centre 45 mm above table | 305 - 390 | never |
+| horizontal reach at shoulder height | 315 - 400 | never |
 
 ![Payload envelope](payload_envelope.png)
 
@@ -85,18 +94,18 @@ Triangular velocity profile (accelerate half way, decelerate half way): alpha = 
 
 | Joint | Move | Inertia (kg*m^2) | alpha (rad/s^2) | omega peak (rpm) | Accel torque (N*m) | Static + accel (N*m) | % stall |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| pan | 180 deg in 1.5 s | 0.0595 | 5.6 | 40 | 0.332 | 0.33 | 11 % |
-| shoulder | 90 deg in 1.0 s | 0.0594 | 6.3 | 30 | 0.373 | 2.12 | 72 % |
-| elbow | 90 deg in 0.8 s | 0.0263 | 9.8 | 38 | 0.258 | 1.33 | 45 % |
+| pan | 180 deg in 1.5 s | 0.0590 | 5.6 | 40 | 0.329 | 0.33 | 11 % |
+| shoulder | 90 deg in 1.0 s | 0.0589 | 6.3 | 30 | 0.370 | 2.10 | 71 % |
+| elbow | 90 deg in 0.8 s | 0.0261 | 9.8 | 38 | 0.256 | 1.32 | 45 % |
 
 Peak speeds are well under the servo's no-load speed (about 0.22 s/60 deg, 45 rpm at 12 V; check the datasheet for your variant). Short peaks above the 1/3 line are fine; the limit is for sustained holding.
 
 ## 5. Base: pan servo overturning moment and tipping
 
-With the arm straight out, the pan servo's output shaft carries an overturning moment of **1.75 N*m** plus 7.2 N of axial load. On the SO-101 layout this goes through the servo's own output bearing, and the turntable rides 2.8 mm clear of the column.
+With the arm straight out, the pan servo's output shaft carries an overturning moment of **1.73 N*m** plus 7.1 N of axial load. On the SO-101 layout this goes through the servo's own output bearing, and the turntable rides 2.8 mm clear of the column.
 
 Whole-arm centre of mass is 186 mm from the base axis; the base edge is 64 mm out. 
-**The arm tips over unless the base is fixed down** (net overturning 1.14 N*m). Clamping through the two rear M4 holes needs 5.6 N per bolt before dynamic loads; an M4 bolt in a printed counterbore is good for well over 100 N.
+**The arm tips over unless the base is fixed down** (net overturning 1.12 N*m). Clamping through the two rear M4 holes needs 5.5 N per bolt before dynamic loads; an M4 bolt in a printed counterbore is good for well over 100 N.
 
 ## 6. Link bending stress and deflection
 
@@ -104,10 +113,10 @@ Arm straight out with 200 g. Sections are cut from the CAD every 2 mm; the core 
 
 | Link | Worst station (mm from joint) | Moment (N*m) | I_eff (mm^4) | Stress (MPa) | Safety factor | Tip deflection (mm) |
 | --- | --- | --- | --- | --- | --- | --- |
-| upper_arm_link | 6 | 1.71 | 7968 | 3.2 | 3.1 | 1.48 |
-| forearm_link | 6 | 1.04 | 7968 | 2.0 | 5.1 | 0.63 |
+| upper_arm_link | 112 | 1.08 | 5410 | 5.8 | 1.7 | 1.65 |
+| forearm_link | 132 | 0.44 | 3568 | 3.7 | 2.7 | 0.66 |
 
-Tip sag from bending of the two printed links: about 2.1 mm.
+Tip sag from bending of the two printed links: about 2.3 mm.
 
 ## 7. Horn screw bearing
 
@@ -115,10 +124,17 @@ All joint torque goes through the output horn's 4 screws (the idler side only su
 
 | Joint | Peak torque (N*m) | Force per screw (N) | Bearing stress (MPa) | Safety factor |
 | --- | --- | --- | --- | --- |
-| shoulder (servo stall) | 2.94 | 106 | 8.8 | 2.3 |
-| shoulder (holding, 200 g) | 1.75 | 63 | 5.3 | 3.8 |
+| shoulder (servo stall) | 2.94 | 105 | 8.3 | 2.4 |
+| shoulder (holding, 200 g) | 1.73 | 62 | 4.9 | 4.1 |
 
-Plate thickness 4.0 mm, M3 screws on a 14 mm circle, allowable 20 MPa.
+Plate and pad 4.2 mm thick at the screws, M3 screws on a 14 mm circle, allowable 20 MPa.
+
+The idler plates on the upper arm and forearm are a separate part (TAL-110), held by 2 M3 screws into the beam. They only support the passive horn, so worst case they carry the whole joint reaction (everything beyond the joint plus the payload), doubled for dynamics:
+
+| Idler plate | Joint reaction x2 (N) | Force per screw (N) | Bearing stress (MPa) | Safety factor |
+| --- | --- | --- | --- | --- |
+| upper_arm_link (shoulder) | 12.2 | 6.1 | 0.49 | 41 |
+| forearm_link (elbow) | 10.0 | 5.0 | 0.40 | 50 |
 
 ## 8. Gripper
 
@@ -137,7 +153,7 @@ Plate thickness 4.0 mm, M3 screws on a 14 mm circle, allowable 20 MPa.
 | elbow | 304 | 0.47 | 2.7 |
 | wrist_flex | 169 | 0.26 | 1.5 |
 
-One count on every pitch joint moves the tip up to 1.4 mm. Repeatability will be set by gear backlash and the 2.1 mm link sag, not by encoder resolution.
+One count on every pitch joint moves the tip up to 1.4 mm. Repeatability will be set by gear backlash and the 2.3 mm link sag, not by encoder resolution.
 
 ## 10. Forearm length sensitivity
 
@@ -145,7 +161,33 @@ CAD rebuilt with a different elbow-to-wrist length; everything else unchanged. A
 
 | Forearm L2 (mm) | Reach, shoulder to tip (mm) | Shoulder (N*m) | Elbow (N*m) | Elbow vs limit |
 | --- | --- | --- | --- | --- |
-| 115 | 400 | 1.64 | 0.97 | 0.99x |
-| 120 | 405 | 1.67 | 0.99 | 1.01x |
-| 125 | 410 | 1.69 | 1.02 | 1.04x |
-| 135 (design) | 420 | 1.75 | 1.07 | 1.09x |
+| 115 | 400 | 1.63 | 0.96 | 0.98x |
+| 120 | 405 | 1.65 | 0.99 | 1.01x |
+| 125 | 410 | 1.68 | 1.01 | 1.03x |
+| 135 (design) | 420 | 1.73 | 1.06 | 1.08x |
+
+## 11. Servo mounts
+
+### Shoulder cradle
+
+The shoulder servo's reaction torque is a couple between its case screws, low in the cradle, and whatever its case bears on higher up. Turning about the screws, it reaches the top of the cradle's side walls after 15.9 mrad and the posts beside the shaft after 25.8 mrad, so the cradle carries it. The cradle's two long walls (±Y) take that force in their own plane, as cantilevers from the turntable. Their bending stress runs across the layer lines (the shoulder prints turntable down), so it is checked against the same allowable as the links. The -Y wall's doubler is left out.
+
+| Load | Torque (N*m) | Force at the cradle top (N) | Root moment (N*m) | Stress (MPa) | Safety factor |
+| --- | --- | --- | --- | --- | --- |
+| holding, no payload | 0.94 | 50 | 1.40 | 1.7 | 5.8 |
+| holding, 200 g | 1.73 | 92 | 2.57 | 3.2 | 3.2 |
+| servo stall | 2.94 | 156 | 4.36 | 5.4 | 1.9 |
+
+Case screws at z 15.1, cradle top at 34, root at 6; the ±Y walls are 4.2 mm thick together and 34 mm long. Allowable 10 MPa sustained. The posts stand 0.9 mm off the case (the first design had 0.5 mm, so the posts took the torque and reached 14 MPa at stall).
+
+### Pan servo case screws
+
+The pan servo carries the 1.73 N*m overturning moment into the base through its bottom face and its case screws. The servo tips about an edge of its bottom face; the screws on the far side hold it down. The arm pans, so the moment can point any way.
+
+| Tipping about | Far pair only, per screw (N) | Both pairs, per screw (N) |
+| --- | --- | --- |
+| the shaft-side edge of the bottom face | 32 | 31 |
+| the far end | 368 | 32 |
+| a long side | 76 | 38 |
+
+With four screws the worst is 38 N on an M2, 7.4 MPa under its head (allowable 20 MPa). With only the far pair, a moment that lifts the shaft end has a few millimetres of lever, so the servo rocks in its 0.3 mm clearance instead of being held.

@@ -6,6 +6,10 @@ output horn on one side and the passive idler horn on the other. The printed
 geometry is original: faceted octagonal beams, a fluted column base and
 separate hub caps.
 
+Printing: the upper arm and forearm stand on a flat underside (Z_BED) and print
+without support; their idler-side clevis plates are a separate part screwed
+into a pocket, so the gap between the clevis plates is open.
+
 Wiring: the bus board (same Waveshare adapter as SO-101) sits on a deck behind
 the column. Each servo's two bus connectors face the side opposite its shaft;
 every pocket has a bay for the mated plugs, and the daisy-chain cable runs
@@ -36,9 +40,22 @@ X_ROLL = 63.0     # wrist flex axis -> wrist roll horn face (roll servo plugs cl
 XJ, ZJ = 42.0, 6.0  # jaw pivot in the gripper frame
 
 # Y bands around a horizontal servo (servo mid-plane at y = 0)
-SHELL_IN, SHELL_OUT = 16.2, 18.4   # shell walls beside the servo caps
-CLV_IN, CLV_OUT = 18.9, 22.9       # clevis plates on the next link's horns
+SHELL_OUT = 18.4                   # shell walls' outer faces beside the servo (clevis plates start at 19.4)
+CLV_IN, CLV_OUT = 19.4, 22.9       # clevis plates on the next link's horns: 1.0 clear of the parent shell
+                                   # (0.5 rubbed on the printed elbow test pieces: elephant's foot, horn end play)
 IDLER_HUB_R = 10.5                 # idler-side plate hub: just over the passive horn, inside the plugs
+HORN_FACE = 18.7                   # output horn's outer face, from the servo mid-plane
+PASSIVE_FACE = 18.55               # passive horn's outer face, from the servo mid-plane
+PAD_R = 9.5                        # clevis plate pads that bear on the horns (inside the shell's R10.8 opening)
+PASSIVE_SCREW = 6                  # M3 x 6 into the passive horn, heads on the idler plate's outer face: the
+                                   # tip stops 1.65 into the horn (2.2 thick at its holes), 1.9 short of the case
+Z_BED = -15.0                      # arm links print standing on this flat underside
+WRIST_TOP = 13.6                   # the wrist prints upside down on its flat top face
+DOUBLER = 1.4                      # the bump's channel runs 0.5 past the shell wall; this leaves 0.9 over it
+SHELL_IN = 16.8                    # shell wall inner face on the connector side (bottom face 16.5 + FIT_C)
+WEB_R = 4.3                        # centre hole widened where the M3 counterbores would leave a 0.2 mm web
+BASE_SEAT = 18.9                   # pan servo's case screw seats, from below: CASE_WALL of floor under the servo
+FOREARM = dict(h0=28.0, h1=30.8, w_mid=32.0, h_mid=24.0)  # arm_link() sizes for the forearm
 
 POSES = {
     # pan, shoulder, elbow, wrist flex, wrist roll, gripper (degrees)
@@ -130,61 +147,146 @@ TO_DIR = {"+z": ((1, 0, 0), (0, 1, 0), (0, 0, 1)), "-z": ((1, 0, 0), (0, -1, 0),
 
 
 # ---------------------------------------------------------------- servo
-# STS3215 features in the servo frame, from the SO-ARM100 reference model and
-# the Feetech drawing. Connectors sit on the back face (opposite the shaft).
+# Feetech STS3215, measured from the Feetech CAD model that SO-101's assembly uses
+# (cad/reference/so101/step/STS3215_from_SO101.step, re-measured by servo_reference.py).
+# Every STS3215 variant (C001 7.4 V, C018/C047 12 V) has this same case.
+#
+# Servo frame: output shaft on +Z through the origin, output horn face at z = 18.7, body
+# toward -X (centre x = -12.5). The case is not a plain box with flat caps:
+#   * the top face (output side) is at 15.5 away from the shaft (x < -5.5), with a raised
+#     rib 14 wide on it (16.45, with four pips to 16.6); round the shaft the case drops to
+#     14.0 under the horn;
+#   * the bottom face (connector side) is at -16.5 away from the shaft, with a bump 12 x 18.4
+#     beside the connectors (rim at -18.4, modelled to -18.5); the passive horn sits in a
+#     recess round the shaft, where the case is at -15.0;
+#   * the idler boss the passive horn turns on reaches -19.1, past the passive horn face.
+# Both horns come with the servo and each is held by one centre screw.
 
-HORN_HOLES = [(6.93 * math.cos(math.radians(45 + 90 * k)),
-               6.93 * math.sin(math.radians(45 + 90 * k))) for k in range(4)]  # 2.5 mm, M3
-CASE_FRONT = ((-29.0, 10.2), (-29.0, -10.2))   # 1.5 mm, M2 self-tapping, shaft face
-CASE_BACK = ((-32.8, 10.2), (-32.8, -10.2))    # 1.5 mm, M2 self-tapping, connector face
-CONN_X = (-16.6, -11.6)                        # connector row on the back face
-CONN_Y = ((0.6, 9.8), (-9.8, -0.6))            # two 3-pin headers, side by side
+CASE_X = (-35.1, 10.1)          # case length 45.2
+CASE_HW = 12.4                  # case half width (24.8)
+CORE_Z = (-15.0, 14.0)          # full case outline, shaft end included
+FACE_X = -5.5                   # the top face and bottom face run from the far end to here
+TOP_FACE = 15.5                 # top face (output side), x < FACE_X
+RIB = (-34.3, -9.0, 7.0, 16.6)  # raised rib on the top face: x from, x to, half width, top. Top is the pips
+                                # (16.6), not the rib face (16.45), so the rib has PASS_C + 0.15 of room
+BOTTOM_FACE = 16.5              # bottom face (connector side) at z = -16.5, x < FACE_X
+BUMP = (-29.7, -17.7, 9.2, 18.5)  # bump beside the connectors: x from, x to, half width, down to z = -18.5.
+                                  # Padded on purpose: the real rim is 18.4 and the middle 18.25, so the
+                                  # channel has PASS_C + 0.1 to 0.25 of room. DOUBLER is sized off 18.5
+HORN_R, HUB_R = 9.6, 5.3        # output horn disc z 16.4 to 18.7, hub z 14.0 to 16.4
+HORN_DISC = 16.4
+PASSIVE_DISC = 16.6             # passive horn disc z -16.6 to -18.55 (hub R4.46 inside the recess)
+SPLINE = (3.0, 17.2)            # bare output spline (horn off): radius, top
+BOSS = (3.0, 19.1)              # idler boss: radius, tip at z = -19.1
+HORN_PCD_R = 7.0                # four M3 holes in each horn on a 14 mm circle
+
+HORN_HOLES = [(HORN_PCD_R * math.cos(math.radians(45 + 90 * k)),
+               HORN_PCD_R * math.sin(math.radians(45 + 90 * k))) for k in range(4)]  # tapped M3
+# M2 self-tapping holes (1.6 mm) in the case, measured on the Feetech CAD. Each face has a second
+# pair beside the shaft, at x = -8.3; the base and the wrist use it (CASE_BACK_SHAFT).
+CASE_FRONT = ((-29.0, 10.25), (-29.0, -10.25))      # top face
+CASE_BACK = ((-32.75, 10.25), (-32.75, -10.25))     # bottom face
+CASE_BACK_SHAFT = ((-8.3, 10.25), (-8.3, -10.25))   # bottom face, beside the shaft
+CONN_X = (-16.5, -11.5)                        # connector sockets, plugs go in from the bottom
+CONN_Y = ((0.5, 10.0), (-10.0, -0.5))          # two 3-pin sockets, side by side
 PLUG_ZONE = (-17.6, -10.6, -10.6, 10.6, -28.5)  # mated plugs + cable bend (x, x, y, y, z)
+
+# Printing tolerance: FDM parts come out a little small inside, so every pocket is the
+# servo plus FIT_C all round; anything that only has to pass (rib, bump, boss, spline,
+# plugs) gets PASS_C. The horn openings are R10.8: the R9.6 horns go through with 1.2 to spare.
+FIT_C = 0.3   # set from the TAL-111 gauge: the bare servo slid through the 0.3 window with light
+PASS_C = 0.4  # friction and was snug in 0.2. The notches in that window are 0.4, as here.
+assert abs(SHELL_IN - (BOTTOM_FACE + FIT_C)) < 1e-9, "SHELL_IN must be the bottom face plus FIT_C"
+HORN_OPENING = 10.8
+# Links and gripper: the rib's way in runs under one of the top-face case screws, so both
+# top-face screws seat 1.0 over the rib channel (heads stand 0.6 proud, out of the next link's reach)
+FRONT_SEAT = RIB[3] + PASS_C + 1.0
+# Case screws: M2 self-tapping, 5 or 6 mm long (the servos' own screws measure about 5 by ruler; SO-101
+# uses M2 x 6). Both work through CASE_WALL of print: an M2 x 5 goes 2.6 mm into the case, an M2 x 6
+# 3.6 (SO-101 drives its M2 x 6 3.8 mm in, so the holes are at least that deep). The links' and
+# gripper's top-face screws seat 1.0 over the rib's channel instead, through 2.5.
+CASE_SCREWS = (5, 6)
+CASE_WALL = 2.4
+BACK_SEAT = BOTTOM_FACE + CASE_WALL      # links and gripper, bottom face: on a pad 0.5 proud of the shell
+SHOULDER_SEATS = (TOP_FACE + CASE_WALL, BOTTOM_FACE + CASE_WALL)  # through the cradle cheeks
+WRIST_SEAT = BOTTOM_FACE + CASE_WALL     # bottom face, from the cradle's back wall
+CASE_PAD_R = 2.6                         # pads under the heads where a seat stands off a wall
+# Printing the way in. Where a servo goes in through the face a part prints on (the arm links), the
+# first layers flare out (elephant's foot) right where the servo has to start: a 45 degree lead-in
+# opens that edge. Where a pocket wall prints as a bridge along the servo's whole way in (the
+# wrist cradle's floor, the gripper's nose), it gets extra room so a sagging bridge doesn't rub.
+# A roof at the end of the way in (the arm links) gets none: extra room there would let the servo
+# sit off its case screw holes.
+LEAD_IN = 0.5
+BRIDGE_C = 0.2
 
 
 def sts3215():
-    """Simplified Feetech STS3215: (body, horns, mated plugs).
-
-    Frame: output shaft on +Z through the origin, horn face at z = 18.7,
-    passive idler horn on the back face, body centre at x = -12.5.
-    """
-    cx = -12.5
-    body = (cq.Workplane("XY").rect(45.4, 24.8).extrude(28.8)
-            .translate((cx, 0, -14.4))
+    """Feetech STS3215: (body, horns, mated plugs), servo frame."""
+    cx = (CASE_X[0] + CASE_X[1]) / 2
+    body = (cq.Workplane("XY").rect(CASE_X[1] - CASE_X[0], 2 * CASE_HW).extrude(CORE_Z[1] - CORE_Z[0])
+            .translate((cx, 0, CORE_Z[0]))
             .edges("|Z and >X").chamfer(3.0)
             .edges("|Z and <X").fillet(1.0))
-    for z0, z1 in ((14.4, 15.9), (-15.9, -14.4)):
-        cap = (cq.Workplane("XY").rect(44.6, 24.4).extrude(z1 - z0)
-               .translate((cx, 0, z0)).edges("|Z").fillet(1.5))
-        body = body.union(cap)
-    body = body.union(box(-29.9, -19.9, -9.2, 9.2, -17.7, -15.9))  # raised pad on the back face
-    for y0, y1 in CONN_Y:  # header shrouds
-        body = body.union(box(*CONN_X, y0, y1, -17.4, -15.9))
-    body = body.union(cyl_z(4.5, 14.7, 16.2)).union(cyl_z(3.0, -18.3, -14.4))  # spline, idler boss
-    body = body.cut(cyl_z(1.25, -18.4, -14.4))  # idler boss tapped hole (M3)
+    recess = cyl_z(11.0, -30, 30)  # the top and bottom faces stop short of the horns
+    top = box(CASE_X[0], FACE_X, -CASE_HW + 0.1, CASE_HW - 0.1, CORE_Z[1], TOP_FACE).cut(recess)
+    rib = box(RIB[0], RIB[1], -RIB[2], RIB[2], TOP_FACE - 0.01, RIB[3]).cut(cyl_z(11.0, -30, 30))
+    bottom = box(CASE_X[0], FACE_X, -CASE_HW + 0.1, CASE_HW - 0.1, -BOTTOM_FACE, CORE_Z[0]).cut(recess)
+    bump = box(BUMP[0], BUMP[1], -BUMP[2], BUMP[2], -BUMP[3], -BOTTOM_FACE + 0.01)
+    body = body.union(top).union(rib).union(bottom).union(bump)
+    body = body.union(cyl_z(SPLINE[0], CORE_Z[1] - 0.01, SPLINE[1]))           # output spline
+    body = body.union(cyl_z(BOSS[0], -BOSS[1], CORE_Z[0] + 0.01))              # idler boss
+    body = body.cut(cyl_z(1.25, -BOSS[1] - 0.1, CORE_Z[0]))                    # boss tapped hole (M3)
+    for x0, x1 in ((CONN_X[0] - 1.0, CONN_X[1] + 0.6),):                       # plug opening
+        body = body.cut(box(x0, x1, -10.5, 10.5, -BOTTOM_FACE - 0.1, CORE_Z[0] + 0.5))
     for x, y in CASE_FRONT:
-        body = body.cut(cyl_z(0.75, 11.9, 16.0, x, y))
-    for x, y in CASE_BACK:
-        body = body.cut(cyl_z(0.75, -16.0, -11.9, x, y))
-    horn = cyl_z(10.0, 16.2, 18.7)
+        body = body.cut(cyl_z(0.8, TOP_FACE - 4.0, TOP_FACE + 0.1, x, y))
+    for x, y in CASE_BACK + CASE_BACK_SHAFT:
+        body = body.cut(cyl_z(0.8, -BOTTOM_FACE - 0.1, -BOTTOM_FACE + 4.0, x, y))
+    horn = cyl_z(HORN_R, HORN_DISC, HORN_FACE).union(cyl_z(HUB_R, CORE_Z[1] + 0.05, HORN_DISC))
     for x, y in HORN_HOLES:
-        horn = horn.cut(cyl_z(1.25, 16, 19, x, y))
-    horn = horn.cut(cyl_z(1.6, 16, 19))
-    idler = cyl_z(10.0, -17.7, -15.9).cut(cyl_z(3.5, -18, -15))  # passive horn
-    plugs = compound([box(CONN_X[0] - 0.3, CONN_X[1] + 0.3, y0 - 0.2, y1 + 0.2, -26.0, -17.4)
+        horn = horn.cut(cyl_z(1.25, HORN_DISC - 1, HORN_FACE + 1, x, y))
+    horn = horn.cut(cyl_z(SPLINE[0] + 0.05, 0, SPLINE[1] + 0.05)).cut(cyl_z(1.6, 0, 19))  # on the spline
+    idler = (cyl_z(HORN_R, -PASSIVE_FACE, -PASSIVE_DISC)
+             .union(cyl_z(4.46, -PASSIVE_DISC, CORE_Z[0] - 0.2))
+             .cut(cyl_z(BOSS[0] + 0.05, -20, -14)))  # passive horn, turns on the boss
+    for x, y in HORN_HOLES:
+        idler = idler.cut(cyl_z(1.25, -20, -PASSIVE_DISC + 1, x, y))
+    plugs = compound([box(CONN_X[0] - 0.4, CONN_X[1] + 0.4, y0 - 0.2, y1 + 0.2, -26.0, CORE_Z[0])
                       for y0, y1 in CONN_Y])
     return body, horn.union(idler), plugs
 
 
-def servo_pocket(r_clear=0.3):
-    """Clearance envelope for a servo and its mated plugs, in the servo frame."""
-    c = r_clear
-    env = box(-35.2 - c, 10.2 + c, -12.4 - c, 12.4 + c, -15.9 - c, 15.9 + c)
-    env = env.union(box(-29.9 - c, -19.9 + c, -9.2 - c, 9.2 + c, -17.7 - c, -15.5))  # back pad
+def _env(c, p):
+    """Servo envelope grown by c (case) and p (rib, bump, spline, boss), servo frame, as boxes
+    and cylinders: [("box", lo, hi) | ("cyl", r, z0, z1)]."""
+    x0, x1 = CASE_X
+    return [("box", (x0 - c, -CASE_HW - c, CORE_Z[0]), (x1 + c, CASE_HW + c, CORE_Z[1])),
+            ("box", (x0 - c, -CASE_HW - c, CORE_Z[1] - 0.01), (x1 + c, CASE_HW + c, TOP_FACE + c)),
+            # the rib channel runs on into the R10.8 horn opening and the spline channel, so no sliver is left
+            ("box", (RIB[0] - p, -RIB[2] - p, TOP_FACE), (-SPLINE[0] - p, RIB[2] + p, RIB[3] + p)),
+            ("box", (x0 - c, -CASE_HW - c, -BOTTOM_FACE - c), (x1 + c, CASE_HW + c, CORE_Z[0] + 0.01)),
+            ("box", (BUMP[0] - p, -BUMP[2] - p, -BUMP[3] - p), (BUMP[1] + p, BUMP[2] + p, -BOTTOM_FACE)),
+            ("cyl", SPLINE[0] + p, CORE_Z[1], SPLINE[1] + c),  # c on top: leaves 0.9 of the 18.4 wall
+            ("cyl", BOSS[0] + p, -BOSS[1] - p, CORE_Z[0])]
+
+
+def servo_pocket(c=FIT_C, p=PASS_C):
+    """Pocket for a servo and its mated plugs, in the servo frame: the case plus c all round,
+    the rib, bump, spline and boss plus p, the plug bay, and the R10.8 openings for both horns."""
+    env = None
+    for e in _env(c, p):
+        if e[0] == "box":
+            (ax0, ay0, az0), (ax1, ay1, az1) = e[1], e[2]
+            s = box(ax0, ax1, ay0, ay1, az0, az1)
+        else:
+            s = cyl_z(e[1], e[2], e[3])
+        env = s if env is None else env.union(s)
     x0, x1, y0, y1, z0 = PLUG_ZONE
-    env = env.union(box(x0, x1, y0, y1, z0, -15.5))                                 # plug bay
-    env = env.union(cyl_z(10.0 + 0.8, -18.5, -15.0))
-    env = env.union(cyl_z(10.0 + 0.8, 15.0, 19.5))
+    env = env.union(box(x0, x1, y0, y1, z0, CORE_Z[0]))                              # plug bay
+    env = env.union(box(x1, x1 + 1.6, -4.5, 4.5, -BOSS[1] - p, CORE_Z[0]))           # no knife edge at the R10.8
+    env = env.union(cyl_z(HORN_OPENING, -BOSS[1] - p, CORE_Z[0]))                    # passive horn
+    env = env.union(cyl_z(HORN_OPENING, CORE_Z[1], HORN_FACE + 0.8))                 # output horn
     return env
 
 
@@ -192,9 +294,63 @@ def pocket_in(loc):
     return moved(servo_pocket(), loc)
 
 
+def lead_in_z(x0, x1, y0, y1, z, t=LEAD_IN):
+    """45 degree lead-in round a rectangular opening in a face at height z that faces -Z (a bed
+    face): t wider all round at z, back to the opening's own size t above it."""
+    w, h = x1 - x0, y1 - y0
+    return (cq.Workplane("XY").workplane(offset=z - 0.1).rect(w + 2 * t + 0.2, h + 2 * t + 0.2)
+            .workplane(offset=t + 0.1).rect(w, h).loft()
+            .translate(((x0 + x1) / 2, (y0 + y1) / 2, 0)))
+
+
+# How each servo goes into its part: the way back out of the pocket (servo frame), and whether
+# the horns may stay on. The parts cut this path; part_checks.py and servo_reference.py slide
+# the servo along it.
+SERVO_ENTRY = {"base": ("+z", True), "shoulder": ("+x", False), "upper arm": ("+y", False),
+               "forearm": ("+y", False), "wrist": ("+z", True), "gripper": ("-y", False)}
+
+
+def servo_entry(direction="+y", c=FIT_C, p=PASS_C, depth=60.0):
+    """Path the servo sweeps when it is pushed into its pocket from `direction` (servo frame),
+    with both horns off. "+y" means the servo arrives from +Y and moves toward -Y.
+
+    Everything that stands off the case gets a channel out to the opening: the rib, the
+    bump, the plug bay, the bare spline and the idler boss.
+    """
+    ax, sg = "xyz".index(direction[1]), 1 if direction[0] == "+" else -1
+
+    def swept(lo, hi):
+        lo, hi = list(lo), list(hi)
+        if sg > 0:
+            hi[ax] = depth
+        else:
+            lo[ax] = -depth
+        return box(lo[0], hi[0], lo[1], hi[1], lo[2], hi[2])
+
+    cut = None
+    for e in _env(c, p):
+        if e[0] == "box":
+            s = swept(e[1], e[2])
+        else:  # a cylinder on the shaft axis: itself plus a slot of its width out along the way in
+            _, r, z0, z1 = e
+            s = cyl_z(r, z0, z1)
+            if ax != 2:
+                s = s.union(swept((0, -r, z0), (0, r, z1)) if ax == 0 else swept((-r, 0, z0), (r, 0, z1)))
+            else:
+                s = s.union(swept((-r, -r, z0), (r, r, z1)))
+        cut = s if cut is None else cut.union(s)
+    x0, x1, y0, y1, z0 = PLUG_ZONE
+    cut = cut.union(swept((x0, y0, z0), (x1, y1, CORE_Z[0])))                             # plug bay
+    # along Y the boss channel is merged with the plug bay so no loose strip of wall is left
+    if ax == 1:
+        r = BOSS[0] + p
+        cut = cut.union(swept((x0, 0, z0), (r, 0, CORE_Z[0])))
+    return cut
+
+
 # ---------------------------------------------------------------- fasteners
 
-SCREW = {3: dict(shank=1.2, head_r=2.85, head_h=1.65, clear=1.6, cbore=3.25),
+SCREW = {3: dict(shank=1.2, head_r=2.85, head_h=1.65, clear=1.7, cbore=3.25),   # clear: 3.4 for FDM
          2.5: dict(shank=0.95, head_r=2.35, head_h=1.38, clear=1.4, cbore=2.7),
          2: dict(shank=0.7, head_r=1.75, head_h=1.04, clear=1.2, cbore=2.1)}
 
@@ -211,19 +367,29 @@ def screw(d, length, at, direction):
     return moved(wp, loc_r(TO_DIR[direction], at))
 
 
-def case_screws(front_seat=None, back_seat=None):
+def case_screw_length(seat, face):
+    """The modelled case screw's length, after checking that from a head seat at `seat` both stock
+    lengths work: the shorter goes at least 2.4 mm into the case, the longer at most 3.8."""
+    wall = seat - face
+    lo, hi = min(CASE_SCREWS) - wall, max(CASE_SCREWS) - wall
+    assert lo >= 2.4 and hi <= 3.8, f"seated {wall:.2f} off the case, M2 x {CASE_SCREWS} go {lo:.2f} to {hi:.2f} in"
+    return max(CASE_SCREWS)
+
+
+def case_screws(front_seat=None, back_seat=None, back_holes=None):
     """M2 case screws into the servo's mounting holes: (cuts, screws), servo frame.
 
     A seat is the distance from the servo mid-plane to the screw-head underside;
     the counterbore runs from the seat outward through whatever is in the way.
     """
     s, cuts, screws = SCREW[2], [], []
-    for seat, holes, sign in ((front_seat, CASE_FRONT, 1), (back_seat, CASE_BACK, -1)):
+    for seat, holes, sign, face in ((front_seat, CASE_FRONT, 1, TOP_FACE),
+                                    (back_seat, back_holes or CASE_BACK, -1, BOTTOM_FACE)):
         if seat is None:
             continue
-        length = math.floor(seat - 11.9)
+        length = case_screw_length(seat, face)
         for x, y in holes:
-            z_face, z_seat = sign * 15.9, sign * seat
+            z_face, z_seat = sign * face, sign * seat
             lo, hi = sorted((z_face, z_seat))
             cuts.append(cyl_z(s["clear"], lo - 0.1, hi + 0.1, x, y))
             lo, hi = sorted((z_seat, sign * 45))
@@ -284,14 +450,26 @@ def base_parts():
     for k in range(18):  # column fluting
         a = math.radians(10 + 20 * k)
         x, y = 41.4 * math.cos(a), 41.4 * math.sin(a)
-        flute = cyl_z(2.6, 19, 52, x, y)
-        flute = flute.union(cq.Workplane("XY").sphere(2.6).translate((x, y, 19)))
+        z0 = 28 if x < 0 and abs(y) < 9 else 19  # the two over the cable tunnel start above it
+        flute = cyl_z(2.6, z0, 52, x, y)
+        flute = flute.union(cq.Workplane("XY").sphere(2.6).translate((x, y, z0)))
         flute = flute.union(cq.Workplane("XY").sphere(2.6).translate((x, y, 52)))
         body = body.cut(flute)
     servo_loc = T(0, 0, H_PAN - 18.7)
-    body = body.cut(pocket_in(servo_loc)).cut(box(-36, 11, -12.7, 12.7, top - 1, top + 5))
+    body = body.cut(pocket_in(servo_loc)).cut(box(-36, 11, -CASE_HW - FIT_C, CASE_HW + FIT_C, top - 1, top + 5))
     body = body.cut(box(-60, -13, -6, 6, 14.8, 24.5))  # cable tunnel: plug bay -> board deck
-    cut, screws = case_screws(back_seat=18.4)            # from below, through the pocket floor
+    # Four case screws from below, through the pocket floor: both ends of the servo's bottom face
+    # are pulled down onto the floor, so the arm's overturning moment can't rock the servo in its pocket.
+    cut, screws = case_screws(back_seat=BASE_SEAT, back_holes=CASE_BACK + CASE_BACK_SHAFT)
+    x0, x1, _, y1, z0 = PLUG_ZONE
+    for sy in (1, -1):  # the pair beside the shaft runs 0.2 mm from the plug bay: open that wall up
+        y = sorted((sy * (CASE_BACK_SHAFT[0][1] - SCREW[2]["cbore"]), sy * y1))
+        cut = cut.union(box(x1, CASE_BACK_SHAFT[0][0], *y, z0, -BASE_SEAT))
+        # below the seats, that pair's counterbores run 0.3 mm from the passive horn opening: join them
+        xs, ys = CASE_BACK_SHAFT[0][0], CASE_BACK_SHAFT[0][1]
+        r = SCREW[2]["cbore"]
+        y = sorted((sy * (ys - r - 2.0), sy * ys))
+        cut = cut.union(box(xs - r, xs + r, *y, -BOSS[1] - PASS_C - 0.1, -BASE_SEAT))
     body = body.cut(moved(cut, servo_loc))
     pcb = box(*BOARD["x"], *BOARD["y"], BOARD["z"], BOARD["z"] + 1.6)
     for x, y in BOARD["holes"]:
@@ -302,23 +480,35 @@ def base_parts():
     return dict(base=body, pcb=pcb, screws=parts), servo_loc
 
 
+# The shoulder servo's reaction torque is a couple between its case screws, low in the cradle, and
+# whatever its case bears on higher up. The posts beside the shaft stand POST_IN - CASE_HW off the case,
+# so turning about the screws it meets the top of the cradle's side walls (FIT_C off, at CRADLE_TOP)
+# first: the cradle's long walls carry the couple in their own plane, not the slender posts.
+CRADLE_TOP = 34.0
+POST_IN = CASE_HW + 0.9
+
+
 def shoulder_parts():
     servo_loc = loc_r(R_SHOULDER, (0, 0, H_SH))
     turntable = (cyl_z(37, 0, 6).faces(">Z").edges().chamfer(2.0)
                  .faces("<Z").edges().chamfer(0.8))
-    cradle = box(-17, 17, -SHELL_OUT, SHELL_OUT, 5, 34)
+    cradle = box(-17, 17, -SHELL_OUT, SHELL_OUT, 5, CRADLE_TOP)
     cradle = try_chamfer(cradle, "|Y", 3.0)
     posts = box(-17, 17, -SHELL_OUT, SHELL_OUT, 30, H_SH + 4)
-    posts = posts.cut(box(-12.9, 12.9, -30, 30, 0, 80))
-    cheeks = prism_xz([(-24, 6), (24, 6), (14, 21), (-14, 21)], CLV_IN, 25.0)
-    cheeks = cheeks.union(prism_xz([(-24, 6), (24, 6), (14, 21), (-14, 21)], -25.0, -CLV_IN))
-    body = turntable.union(cradle).union(posts).union(cheeks)
+    posts = posts.cut(box(-POST_IN, POST_IN, -30, 30, 0, 80))
+    # cheeks start on the cradle wall (no slit between them) and carry the case screw heads
+    cheeks = prism_xz([(-24, 6), (24, 6), (14, 21), (-14, 21)], SHELL_OUT, 25.0)
+    cheeks = cheeks.union(prism_xz([(-24, 6), (24, 6), (14, 21), (-14, 21)], -25.0, -SHELL_OUT))
+    # doubler over the back-pad channel above the -Y cheek (the upper arm's idler plate can't reach it)
+    doubler = box(-10.5, 10.5, -SHELL_OUT - DOUBLER, -SHELL_OUT, H_SH - 31.0, 34)
+    body = turntable.union(cradle).union(posts).union(cheeks).union(doubler)
     # clip on the cradle's back face anchors the pan service loop
     body = body.union(cable_clip((-17, -9, 21), ((0, 0, -1), (0, 1, 0), (1, 0, 0))))
-    body = body.cut(pocket_in(servo_loc)).cut(box(-12.7, 12.7, -16.2, 16.2, 10, 80))
+    body = body.cut(pocket_in(servo_loc)).cut(box(-CASE_HW - FIT_C, CASE_HW + FIT_C, -SHELL_IN, TOP_FACE + FIT_C, H_SH + CASE_X[0] - FIT_C, 80))
+    body = body.cut(moved(servo_entry(SERVO_ENTRY["shoulder"][0]), servo_loc))  # in from the top, far end first
     body = body.cut(cyl_y(4, -30, 30, 0, 14))
     # pan horn: centre access and four M3 screws from inside the cradle
-    body = body.cut(cyl_z(3.5, -1, 11))
+    body = body.cut(cyl_z(3.5, -1, 11)).cut(cyl_z(WEB_R, 4, 11))
     screws = []
     for x, y in HORN_HOLES:
         body = body.cut(cyl_z(SCREW[3]["clear"], -1, 4, x, y)).cut(cyl_z(SCREW[3]["cbore"], 4, 11, x, y))
@@ -330,51 +520,174 @@ def shoulder_parts():
                .threePointArc((33, 0), (33 * math.cos(math.radians(-18)), 33 * math.sin(math.radians(-18))))
                .close().extrude(8).translate((0, 0, -1)).rotate((0, 0, 0), (0, 0, 1), 90 * k))
         body = body.cut(win)
-    cut, cscrews = case_screws(front_seat=18.5, back_seat=18.5)  # through the cheeks
+    cut, cscrews = case_screws(front_seat=SHOULDER_SEATS[0], back_seat=SHOULDER_SEATS[1])  # through the cheeks
     body = body.cut(moved(cut, servo_loc))
     screws.append(moved(cscrews, servo_loc))
     return dict(shoulder=body, screws=compound(screws)), servo_loc
 
 
-def clevis(hub_r=16.0, reach=30.0, half_h=15.0):
-    """Output-side plate (+Y) on the horn, slim idler-side plate (-Y) on the passive horn.
-
-    The idler plate stays inside IDLER_HUB_R near the axis so it swings past the
-    parent servo's bus plugs.
-    """
+def clevis_plate(hub_r=16.0, reach=30.0, half_h=15.0):
+    """Output-side clevis plate (+Y), screwed to the servo horn."""
     t = CLV_OUT - CLV_IN
     out = (cq.Workplane("XZ").circle(hub_r).extrude(-t)
            .union(prism_xz([(0, -half_h), (reach, -half_h), (reach, half_h), (0, half_h)], 0, t))
            .translate((0, CLV_IN, 0)))
-    out = out.cut(horn_holes_y(CLV_IN - 1, CLV_OUT + 1))
-    # waisted neck: pinched to 17 mm just past the hub so the plug corners clear it at full bend
-    neck = [(0, -IDLER_HUB_R), (6, -8.5), (0.6 * reach, -8.5), (reach, -half_h),
-            (reach, half_h), (0.6 * reach, 8.5), (6, 8.5), (0, IDLER_HUB_R)]
+    # the plate clears the parent shell by 1.0 mm, so a 0.7 mm pad reaches the horn face; the screws
+    # pass through pad and plate, so their stack (horn face to outer face) is unchanged
+    out = out.union(cyl_y(PAD_R, HORN_FACE, CLV_IN))
+    return out.cut(horn_holes_y(CLV_IN - 1, CLV_OUT + 1))
+
+
+def between_plates():
+    """Space between a link's clevis plates, kept clear for the parent servo's shell.
+    The horn pads stay: they sit inside the shell's R10.8 horn openings."""
+    keep = cyl_y(PAD_R, HORN_FACE, CLV_IN).union(cyl_y(PAD_R, -CLV_IN, -PASSIVE_FACE))
+    return cyl_y(21.0, -CLV_IN, CLV_IN).union(box(-30, 0, -CLV_IN, CLV_IN, -30, 30)).cut(keep)
+
+
+def idler_neck(reach=30.0, half_h=15.0, grow=0.0):
+    """(x, z) outline of the idler plate's waisted neck, grown by `grow` for a pocket."""
+    g = grow
+    return [(0, -IDLER_HUB_R - g), (6, -8.5 - g), (0.6 * reach, -8.5 - g), (reach + g, -half_h - g),
+            (reach + g, half_h + g), (0.6 * reach, 8.5 + g), (6, 8.5 + g), (0, IDLER_HUB_R + g)]
+
+
+# arm-link idler plates screw into a pocket on the beam's -Y side: (x, z) of the two M3 x 10
+IDLER_TAB_SCREWS = ((26.0, 7.0), (26.0, -7.0))
+
+
+def idler_plate(reach=30.0, half_h=15.0, tab=False):
+    """Idler-side clevis plate (-Y) on the servo's passive horn, in the link frame.
+
+    The plate stays inside IDLER_HUB_R near the axis and its neck is pinched to
+    17 mm just past the hub, so the parent servo's bus plugs clear it at full
+    bend. With `tab`, it is a separate part held by two M3 screws through its
+    end into the arm-link beam (TAL-110). The four M3 x 6 into the passive horn
+    sit on the plate's outer face (no counterbores).
+    """
+    t = CLV_OUT - CLV_IN
     idl = (cq.Workplane("XZ").circle(IDLER_HUB_R).extrude(-t)
-           .union(prism_xz(neck, 0, t))
+           .union(prism_xz(idler_neck(reach, half_h), 0, t))
            .translate((0, -CLV_OUT, 0)))
-    idl = idl.union(cyl_y(5, -CLV_IN, -18.35))           # pad onto the idler boss
-    idl = idl.cut(cyl_y(SCREW[3]["clear"] + 0.1, -CLV_OUT - 1, -18))
-    return out.union(idl)
+    # Like the output side, the plate is screwed to the passive horn, which turns on the
+    # servo's idler boss; nothing is screwed into the boss itself. A pad reaches the horn face.
+    idl = idl.union(cyl_y(PAD_R, -CLV_IN, -PASSIVE_FACE))
+    idl = idl.cut(cyl_y(3.5, -CLV_OUT - 1, -PASSIVE_FACE + 1))       # centre: clears the boss
+    for x, z in HORN_HOLES:  # plain holes: the heads sit on the outer face, so the bed face is one solid layer
+        idl = idl.cut(cyl_y(SCREW[3]["clear"], -CLV_OUT - 1, -PASSIVE_FACE + 1, x, z))
+    if tab:
+        for x, z in IDLER_TAB_SCREWS:
+            idl = idl.cut(cyl_y(SCREW[3]["clear"] + 0.1, -CLV_OUT - 1, -CLV_IN + 1, x, z))
+    return idl
+
+
+def clevis(hub_r=16.0, reach=30.0, half_h=15.0):
+    """Output plate (+Y) on the horn and slim idler plate (-Y) on the passive horn, as one solid."""
+    return clevis_plate(hub_r, reach, half_h).union(idler_plate(reach, half_h))
 
 
 def clevis_screws():
-    """Four M3 x 6 into the output horn, one M3 x 8 into the idler boss."""
-    return horn_screws_y(CLV_OUT) + [screw(3, 8, (0, -CLV_OUT, 0), "+y")]
+    """Four M3 x 6 into the output horn and four M3 x 6 into the passive horn."""
+    passive = [screw(3, PASSIVE_SCREW, (x, -CLV_OUT, z), "+y") for x, z in HORN_HOLES]
+    return horn_screws_y(CLV_OUT) + passive
+
+
+def idler_tab_screws():
+    """Two M3 x 10 through the separate idler plate into the beam."""
+    return [screw(3, 10, (x, -CLV_OUT, z), "+y") for x, z in IDLER_TAB_SCREWS]
 
 
 def hub_cap(large=True):
-    """One snap-on cap in its own frame: inner face on y = 0, outer face at y = 3.4."""
-    r, recess, groove, boss = (12.5, 10.4, 9.0, 6.0) if large else (10.2, 3.4, 7.0, 4.5)
+    """One snap-on cap in its own frame: inner face on y = 0, outer face at y = 3.4.
+
+    The outer face is plain, so it prints face down on one solid first layer.
+    """
+    r, recess = (12.5, 10.4) if large else (10.2, 3.4)
     return (cyl_y(r, 0, 3.4).faces(">Y").edges().chamfer(0.8)
-            .cut(cyl_y(recess, -0.1, 1.8))                        # recess over the screw heads
-            .cut(cyl_y(groove, 3.0, 3.5)).union(cyl_y(boss, 1.8, 3.4)))  # ring groove on the face
+            .cut(cyl_y(recess, -0.1, 1.8)))                        # recess over the screw heads
+
+
+# Fit gauge (TAL-111): a ladder of windows, the case grown by each clearance and the rib, spline, bump
+# and boss notches by PASS_C - FIT_C more, as in the pockets. The pockets use FIT_C (0.3).
+GAUGE_LADDER = (0.2, 0.3, 0.4, 0.5, 0.6, 0.7)  # 0.1 can never pass: the real bump flares 0.25 at its base
+GAUGE_COLS, GAUGE_H, GAUGE_WALL, GAUGE_LABEL = 3, 6.0, 3.0, 7.0  # columns; thickness; walls; label strip
+
+
+def gauge_window(cp):
+    """Rectangles (x0, x1, y0, y1) of the fit-gauge window at clearance (c, p), in the servo's
+    X (length) and Z (thickness) directions with the servo frame origin at (0, 0): the case,
+    plus notches for the rib, the bare spline, the bump and the idler boss."""
+    c, p = cp
+    return [(CASE_X[0] - c, CASE_X[1] + c, -BOTTOM_FACE - c, TOP_FACE + c),
+            (RIB[0] - p, RIB[1] + p, 0.0, RIB[3] + p),
+            (-SPLINE[0] - p, SPLINE[0] + p, 0.0, SPLINE[1] + p),
+            (BUMP[0] - p, BUMP[1] + p, -BUMP[3] - p, 0.0),
+            (-BOSS[0] - p, BOSS[0] + p, -BOSS[1] - p, 0.0)]
+
+
+def gauge_layout(h=GAUGE_H, wall=GAUGE_WALL, label=GAUGE_LABEL):
+    """[(c, (ox, oy), (lx, ly))] for each gauge window: its clearance, where the servo frame's
+    origin sits on the plate, and the centre of its label; plus the plate size (W, H)."""
+    dp, cmax = PASS_C - FIT_C, max(GAUGE_LADDER)
+    cell_w = CASE_X[1] - CASE_X[0] + 2 * cmax
+    ylo, yhi = -BOSS[1] - cmax - dp, SPLINE[1] + cmax + dp
+    cell_h = yhi - ylo
+    rows = -(-len(GAUGE_LADDER) // GAUGE_COLS)
+    W = GAUGE_COLS * cell_w + (GAUGE_COLS + 1) * wall
+    H = rows * (cell_h + label + wall) + wall
+    out = []
+    for k, c in enumerate(GAUGE_LADDER):
+        col, row = k % GAUGE_COLS, rows - 1 - k // GAUGE_COLS  # read left to right, top row first
+        x0, y0 = wall + col * (cell_w + wall), wall + row * (cell_h + label + wall)
+        # every window is centred in its cell, so the walls between them are `wall` or more
+        ox = x0 + cell_w / 2 - (CASE_X[0] + CASE_X[1]) / 2
+        oy = y0 + label - ylo
+        out.append((c, (ox, oy), (x0 + cell_w / 2, y0 + label / 2)))
+    return out, (W, H)
+
+
+def fit_gauge(h=GAUGE_H, wall=GAUGE_WALL, label=GAUGE_LABEL):
+    """Servo fit gauge (TAL-111): a clearance ladder, printed flat. Returns (solid, layout).
+
+    Six windows of the profile the bare servo (horns off) shows when it is pushed into an arm
+    link's pocket along its width, as it is in TAL-103 and TAL-104: the case grown by 0.2 to
+    0.7 mm, the rib, spline, bump and boss notches by 0.1 mm more. Each is labelled with its
+    clearance. The tightest window the servo goes through by hand is the clearance this printer
+    needs, to 0.1 mm; the pockets use FIT_C.
+    """
+    layout, (W, H) = gauge_layout(h, wall, label)
+    plate = box(0, W, 0, H, 0, h)
+    dp = PASS_C - FIT_C
+    for c, (ox, oy), (lx, ly) in layout:
+        for x0, x1, y0, y1 in gauge_window((c, c + dp)):
+            plate = plate.cut(box(x0 + ox, x1 + ox, y0 + oy, y1 + oy, -1, h + 1))
+        text = (cq.Workplane("XY").workplane(offset=h).center(lx, ly)
+                .text(f"{c:.1f}", 5.0, -0.6, combine=False, halign="center", valign="center"))
+        plate = plate.cut(text)
+    return plate, layout
+
+
+COUPON_CUT = {"TAL-112": (L1 - 39.5, L1 + 30.0),  # the elbow servo's end of TAL-103 (upper arm)
+              "TAL-113": (-30.0, 33.0)}           # the elbow clevis of TAL-104 (forearm), idler pocket included
+
+
+def test_coupon(part_no):
+    """A test piece cut from an arm link, in the link's frame, printed the same way as the link.
+
+    TAL-112, the upper arm's servo end, takes the elbow servo exactly as TAL-103 will: way in
+    from below, rib and bump channels, the bridged roof, the M2 case screws, both horn openings.
+    TAL-113, the forearm's clevis end, screws onto that servo's horns with the real horn
+    screws and a TAL-110 idler plate, so the elbow joint can be assembled and turned.
+    """
+    x0, x1 = COUPON_CUT[part_no]
+    link = arm_link(L1)[0] if part_no == "TAL-112" else arm_link(L2, **FOREARM)[0]
+    return link.intersect(box(x0, x1, -40, 40, -40, 40))
 
 
 def hub_caps():
-    """Caps over the clevis screws: large on the horn side, small on the idler side."""
-    return (hub_cap(True).translate((0, CLV_OUT, 0))
-            .union(hub_cap(False).mirror("XZ").translate((0, -CLV_OUT, 0))))
+    """Cap over the output-horn screws. The idler side has none: a cap wide enough for the
+    passive-horn screws would hit the parent servo's plugs."""
+    return hub_cap(True).translate((0, CLV_OUT, 0))
 
 
 def ruled_loft(stations):
@@ -395,20 +708,45 @@ def ridge_profile(h):
 CLIP_NEG_Y = ((1, 0, 0), (0, 0, -1), (0, 1, 0))  # clip on a -Y face, cable along X
 
 
-def arm_link(L, h0=30.0, h1=30.8, w_mid=34.0, h_mid=25.0, spine=True):
-    """Clevis at the origin, waisted octagonal beam, servo shell at x = L."""
+def octagon_flat(w, h, c, z_bed=Z_BED):
+    """Beam profile: top at h / 2 with chamfered corners, flat square-cornered underside on z_bed.
+
+    The underside runs the full width, so on the bed it joins the clevis plate's
+    edge into one first layer.
+    """
+    a, t = w / 2, h / 2
+    return [(-a, z_bed), (a, z_bed), (a, t - c), (a - c, t), (-a + c, t), (-a, t - c)]
+
+
+def arm_link(L, h0=30.0, h1=30.8, w_mid=34.0, h_mid=25.0, spine=True, servo_entry_below=True):
+    """Clevis output plate at the origin, waisted octagonal beam, servo shell at x = L.
+
+    Prints standing on its flat underside (z = Z_BED): the waist dips on top only.
+    The idler plate is a separate part (TAL-110) screwed into a pocket on the -Y
+    side, so the gap between the clevis plates needs no support.
+    Returns (body, servo location, screws, idler plate).
+    """
     servo_loc = loc_r(R_LINK, (L, 0, 0))
     x0, x1 = 20.0, L - 36.0
     xm = (x0 + x1) / 2
     # (x, width, height, chamfer) at the clevis end, the waist and the shell end
     st = ((x0, 2 * CLV_OUT, h0, 6.0), (xm, w_mid, h_mid, 5.0), (x1, 2 * SHELL_OUT, h1, 6.0))
-    beam = ruled_loft([(x, octagon(w, h, c)) for x, w, h, c in st])
-    shell = prism_xz(octagon_xz(L - 38.2, L, h1), -SHELL_OUT, SHELL_OUT)
+    beam = ruled_loft([(x, octagon_flat(w, h, c)) for x, w, h, c in st])
+    xa, b = L - 38.2, h1 / 2  # shell: chamfered on top only, flat underside
+    shell = prism_xz([(xa, Z_BED), (L, Z_BED), (L, b), (xa + 4, b), (xa, b - 4)], -SHELL_OUT, SHELL_OUT)
     shell = shell.union(cyl_y(18.0, -SHELL_OUT, SHELL_OUT, L, 0))
-    body = clevis().union(beam).union(shell)
+    body = clevis_plate().union(beam).union(shell)
+    body = body.cut(box(-40, L + 40, -40, 40, -60, Z_BED))  # flat underside: hub and shell trimmed
+    # nose floor just past the servo: ties both shell walls together on the bed (stays inside R21)
+    body = body.union(box(L + 9.0, L + 13.5, -SHELL_OUT, SHELL_OUT, Z_BED, Z_BED + 4))  # servo entry cuts its back
+    # doubler over the back-pad channel in the -Y wall (beyond the next link's reach, |elbow| <= 105 deg)
+    body = body.union(box(L - 31.0, L - 16.4, -SHELL_OUT - DOUBLER, -SHELL_OUT, Z_BED, 10.5))
     if spine:
         ridge = ruled_loft([(x, ridge_profile(h)) for x, _, h, _ in st])
         body = body.union(ridge.intersect(box(x0 + 8, x1 - 4, -10, 10, -40, 40)))
+    body = body.cut(prism_xz(idler_neck(grow=0.3), -CLV_OUT - 1, -CLV_IN))  # idler plate pocket, 0.3 all round
+    for x, z in IDLER_TAB_SCREWS:
+        body = body.cut(cyl_y(1.25, -CLV_IN - 0.1, -CLV_IN + 8.0, x, z))  # M3 pilot, 2.5 mm
     # twin windows, one per tapered segment, kept 1.5 mm inside the chamfer facets
     for (xa, _, ha, ca), (xb, _, hb, cb), ia, ib in ((*st[:2], 8, 3), (*st[1:], 3, 4)):
         def half(x, xa=xa, xb=xb, ha=ha, hb=hb, ca=ca, cb=cb):
@@ -419,13 +757,20 @@ def arm_link(L, h0=30.0, h1=30.8, w_mid=34.0, h_mid=25.0, spine=True):
         body = body.cut(prism_xz([(a, 0), (a + ka, -half(a + ka)), (b - kb, -half(b - kb)), (b, 0),
                                   (b - kb, half(b - kb)), (a + ka, half(a + ka))], -30, 30))
     body = body.union(cable_clip((xm, -w_mid / 2 - 0.2, 0), CLIP_NEG_Y))  # bus cable, -Y side
-    body = body.cut(cyl_y(21.0, -CLV_IN, CLV_IN)).cut(box(-30, 0, -CLV_IN, CLV_IN, -30, 30))
+    body = body.cut(between_plates())
     body = body.cut(pocket_in(servo_loc))
-    body = body.cut(box(L - 35.5, L - 4, -SHELL_IN, SHELL_IN, -40, -12))  # servo drops in from below
-    cut, cscrews = case_screws(front_seat=SHELL_OUT - 1.1, back_seat=SHELL_OUT - 1.1)
+    if servo_entry_below:  # servo pushes straight up from below: floor open under its whole length
+        body = body.cut(moved(servo_entry(SERVO_ENTRY["upper arm"][0]), servo_loc))
+        body = body.cut(lead_in_z(L + CASE_X[0] - FIT_C, L + CASE_X[1] + FIT_C,
+                                  -SHELL_IN, TOP_FACE + FIT_C, Z_BED))  # the way in opens through the bed face
+    else:
+        body = body.cut(box(L - 35.5, L - 4, -SHELL_IN, SHELL_IN, -40, -12))
+    for x, y in CASE_BACK:  # the bottom-face heads seat on pads standing off the -Y wall
+        body = body.union(moved(cyl_z(CASE_PAD_R, -BACK_SEAT, -SHELL_OUT + 0.01, x, y), servo_loc))
+    cut, cscrews = case_screws(front_seat=FRONT_SEAT, back_seat=BACK_SEAT)
     body = body.cut(moved(cut, servo_loc))
-    screws = compound(clevis_screws() + [moved(cscrews, servo_loc)])
-    return body, servo_loc, screws
+    screws = compound(clevis_screws() + idler_tab_screws() + [moved(cscrews, servo_loc)])
+    return body, servo_loc, screws, idler_plate(tab=True)
 
 
 def octagon_xz(xa, xb, h):
@@ -436,21 +781,33 @@ def octagon_xz(xa, xb, h):
 def wrist_parts():
     xs = X_ROLL - 18.7  # roll servo shaft origin
     servo_loc = loc_r(R_ROLL, (xs, 0, 0))
+    # Prints upside down on a flat top face at z = WRIST_TOP: the cradle top, the lugs and the
+    # output plate all reach it (hubs trimmed), so the output plate is built from the bed up.
+    top = WRIST_TOP
     # side lugs only: the cradle's back wall already spans the middle
-    bridge = box(20.5, 31, -CLV_OUT, CLV_OUT, -12, 12)
-    bridge = try_chamfer(bridge, "|Y", 3.0)
-    cradle = box(20.5, X_ROLL - 2.8, -15, 15, -38.5, 13.6)
+    bridge = box(20.5, 31, -CLV_OUT, CLV_OUT, -12, top)
+    cradle = box(20.5, X_ROLL - 2.8, -15, 15, -38.5, top)
     cradle = try_chamfer(cradle, "|X", 4.0)
-    body = clevis(reach=24, half_h=12).union(bridge).union(cradle)
+    body = clevis(reach=24, half_h=12).union(box(0, 24, CLV_IN, CLV_OUT, 0, top))
+    body = body.cut(horn_holes_y(CLV_IN - 1, CLV_OUT + 1))  # re-cut the horn holes the extension covered
+    body = body.union(bridge).union(cradle).cut(box(-40, 80, -40, 40, top, 40))
     body = body.union(cable_clip((46, -15.2, -30), CLIP_NEG_Y))
-    body = body.cut(cyl_y(21.0, -CLV_IN, CLV_IN)).cut(box(-30, 0, -CLV_IN, CLV_IN, -30, 30))
-    body = body.cut(pocket_in(servo_loc)).cut(box(xs - 16.0, 80, -12.7, 12.7, -36, 11))
+    body = body.cut(between_plates())  # keeps both horn pads
+    body = body.cut(pocket_in(servo_loc)).cut(box(xs - 16.0, 80, -CASE_HW - FIT_C, CASE_HW + FIT_C, CASE_X[0] - FIT_C, CASE_X[1] + FIT_C))
+    # printed upside down, the cradle floor is a 25 mm bridge over the servo's far end along its whole way in
+    body = body.cut(box(xs - 16.0, 80, -CASE_HW - FIT_C, CASE_HW + FIT_C,
+                        CASE_X[0] - FIT_C - BRIDGE_C, CASE_X[0] - FIT_C + 0.01))
     # roll servo plugs face the wrist axis; the cable leaves the bay under the -Y lug
     body = body.cut(box(xs - 28.5, xs - 15.5, -18.6, 0, -17.6, -10.6))
     body = body.cut(box(xs - 28.5, xs - 15.5, -30, 0, -17.6, -12.4))
     body = body.cut(prism_xz(hex_pts(xs - 8, 54 + 3, -12, 8), -30, 30))  # side windows onto the servo
-    cut, cscrews = case_screws(back_seat=18.0)  # from the back wall, before the gripper goes on
+    # four case screws from the clevis side, through the bridge lug: both ends of the servo are held,
+    # so it can't rock in its pocket (the pair beside the shaft, like the base's)
+    cut, cscrews = case_screws(back_seat=WRIST_SEAT, back_holes=CASE_BACK + CASE_BACK_SHAFT)
     body = body.cut(moved(cut, servo_loc))
+    # below its seat, the counterbore of the shaft-side screw next to the plug bay runs 0.2 mm from it: join them
+    r, (sx, sy) = SCREW[2]["cbore"], CASE_BACK_SHAFT[0]
+    body = body.cut(box(xs - 28.5, xs - WRIST_SEAT, -sy - r, -sy + r, -10.7, sx))
     screws = compound(clevis_screws() + [moved(cscrews, servo_loc)])
     return dict(wrist=body, screws=screws), servo_loc
 
@@ -462,6 +819,7 @@ def hex_pts(xa, xb, zc, hw):
 
 
 FINGER_HW = 10.0  # jaw fingers are 20 mm wide, centred on the roll axis
+ROLL_CBORE_RUN = 14.0  # the lower roll-horn counterbores run on to here, a screw length past the seat
 
 
 def gripper_parts():
@@ -475,20 +833,29 @@ def gripper_parts():
                     -FINGER_HW, FINGER_HW)
     finger = prism_xz([(48, -9.4), (54, -9.4), (66, -0.5), (108, -0.5), (108, -6),
                        (64, -17), (48, -17)], -FINGER_HW, FINGER_HW)
-    body = disc.union(housing).union(keel).union(finger)
+    doubler = box(XJ - 31.0, XJ - 16.4, -SHELL_OUT - DOUBLER, -SHELL_OUT, ZJ - 10.5, ZJ + 15.4)  # bump channel
+    body = disc.union(housing).union(keel).union(finger).union(doubler)
     body = body.cut(pocket_in(servo_loc))
-    body = body.cut(box(XJ - 35.5, XJ - 4, -SHELL_IN, SHELL_IN, ZJ + 12, ZJ + 30))
+    body = body.cut(moved(servo_entry(SERVO_ENTRY["gripper"][0]), servo_loc))  # jaw servo goes in from the top
+    # standing on the disc, the pocket's shaft-end wall prints as a 33 mm bridge along the whole way in
+    body = body.cut(moved(box(CASE_X[1] + FIT_C - 0.01, CASE_X[1] + FIT_C + BRIDGE_C, -60, CASE_HW + FIT_C,
+                              -BOTTOM_FACE - FIT_C, TOP_FACE + FIT_C), servo_loc))
     body = body.cut(prism_xz(hex_pts(9, 33, ZJ, 7), -30, 30))  # side windows onto the servo
     for k in range(6):  # grip serrations
         x = 72 + 6 * k
         body = body.cut(prism_xz([(x, 0), (x + 1.5, -1.6), (x + 3, 0)], -13, 24))
     # roll horn: four M3 from inside the housing (counterbored), centre access
     screws = []
-    body = body.cut(cyl_x(3.5, -1, 7))
+    body = body.cut(cyl_x(3.5, -1, 7)).cut(cyl_x(WEB_R, 3.5, 7))
     for y, z in HORN_HOLES:
-        body = body.cut(cyl_x(SCREW[3]["clear"], -1, 3.5, y, z)).cut(cyl_x(SCREW[3]["cbore"], 3.5, 7, y, z))
+        # the lower two heads sit below the servo pocket's floor: their counterbores run on as
+        # grooves in the floor, so the screw can be laid in and slid home
+        body = body.cut(cyl_x(SCREW[3]["clear"], -1, 3.5, y, z))
+        body = body.cut(cyl_x(SCREW[3]["cbore"], 3.5, ROLL_CBORE_RUN if z < 0 else 7, y, z))
         screws.append(screw(3, 6, (3.5, y, z), "-x"))
-    cut, cscrews = case_screws(front_seat=SHELL_OUT - 1.1, back_seat=SHELL_OUT - 1.1)
+    for x, y in CASE_BACK:  # the bottom-face heads seat on pads standing off the -Y wall
+        body = body.union(moved(cyl_z(CASE_PAD_R, -BACK_SEAT, -SHELL_OUT + 0.01, x, y), servo_loc))
+    cut, cscrews = case_screws(front_seat=FRONT_SEAT, back_seat=BACK_SEAT)
     body = body.cut(moved(cut, servo_loc))
     screws.append(moved(cscrews, servo_loc))
     return dict(gripper=body, screws=compound(screws)), servo_loc
@@ -498,7 +865,8 @@ def moving_jaw():
     """Moving jaw in its pivot frame (pivot at origin, rotates about Y)."""
     plate = (cq.Workplane("XZ").circle(13).extrude(-(CLV_OUT - CLV_IN))
              .union(prism_xz([(0, -13), (34, -5.5), (34, 9.1), (0, 13)], 0, CLV_OUT - CLV_IN))
-             .translate((0, CLV_IN, 0)))
+             .translate((0, CLV_IN, 0))
+             .union(cyl_y(PAD_R, HORN_FACE, CLV_IN)))  # pad on the horn face
     profile = [(22, -5.5), (64, -5.5), (64, -1.5), (52, 5), (30, 10), (22, 9)]
     finger = prism_xz(profile, -FINGER_HW, FINGER_HW)
     knuckle = prism_xz([(22, -5.5), (34, -5.5), (34, 9.1), (30, 10), (22, 9)],
@@ -506,8 +874,63 @@ def moving_jaw():
     body = plate.union(finger).union(knuckle)
     for k in range(6):
         x = 30 + 6 * k
-        body = body.cut(prism_xz([(x, -5.5), (x + 1.5, -3.9), (x + 3, -5.5)], -13, 24))
+        body = body.cut(prism_xz([(x, -5.5), (x + 1.5, -3.9), (x + 3, -5.5)], -13, CLV_IN))  # finger only
     return body.cut(horn_holes_y(CLV_IN - 1, CLV_OUT + 1))
+
+
+# ---------------------------------------------------------------- printing
+
+# How each printed part sits on the bed: the face that goes down (in the part's own
+# frame) and what, if anything, needs support. Chosen by measuring the overhang in all
+# six orientations. Slicer: support on, but not for slopes steeper than 45 degrees and
+# never inside horizontal screw holes (drill those to size); bridges print unsupported.
+PRINT_SETUP = {
+    "TAL-101": ("-Z", "plinth down; no support"),
+    "TAL-102": ("-Z", "turntable down; no support"),
+    "TAL-103": ("-Z", "flat underside down; no support (servo-opening roof and window tops bridge)"),
+    "TAL-104": ("-Z", "flat underside down; no support (servo-opening roof and window tops bridge)"),
+    "TAL-105": ("+Z", "upside down, flat top face down; support only under the idler plate's neck (5 mm up); "
+                      "the cradle floor and plug bay roof bridge"),
+    "TAL-106": ("-X", "standing on the roll-horn disc; no support (one 32 mm bridge at the front of the "
+                      "servo opening); use a brim, the part is 108 tall"),
+    "TAL-107": ("+Y", "horn plate down; support under the finger"),
+    "TAL-108": ("+Y", "outer face down; no support"),
+    "TAL-110": ("-Y", "outer face down; no support"),
+    "TAL-111": ("-Z", "flat; no support. Print it first, with the same settings as the arm"),
+    "TAL-112": ("-Z", "flat underside down, as TAL-103; no support (the servo-opening roof bridges)"),
+    "TAL-113": ("-Z", "flat underside down, as TAL-104; no support"),
+}
+
+
+def printed_parts():
+    """Every printed part in its own frame: {part no: (slug, quantity, solid)}."""
+    base, _ = base_parts()
+    shoulder, _ = shoulder_parts()
+    wrist, _ = wrist_parts()
+    grip, _ = gripper_parts()
+    upper, _, _, idler = arm_link(L1)
+    fore, _, _, _ = arm_link(L2, **FOREARM)
+    return {"TAL-101": ("base", 1, base["base"]), "TAL-102": ("shoulder", 1, shoulder["shoulder"]),
+            "TAL-103": ("upper-arm", 1, upper), "TAL-104": ("forearm", 1, fore),
+            "TAL-105": ("wrist", 1, wrist["wrist"]), "TAL-106": ("gripper-body", 1, grip["gripper"]),
+            "TAL-107": ("moving-jaw", 1, moving_jaw()), "TAL-108": ("hub-cap", 3, hub_cap(True)),
+            "TAL-110": ("idler-plate", 2, idler), "TAL-111": ("servo-fit-gauge", 1, fit_gauge()[0]),
+            "TAL-112": ("pocket-test-coupon", 1, test_coupon("TAL-112")),
+            "TAL-113": ("clevis-test-coupon", 1, test_coupon("TAL-113"))}
+
+
+BED_ROT = {"-Z": None, "+Z": ((1, 0, 0), 180), "+Y": ((1, 0, 0), -90), "-Y": ((1, 0, 0), 90),
+           "-X": ((0, 1, 0), -90), "+X": ((0, 1, 0), 90)}  # rotation that puts each face down
+
+
+def on_bed(solid, down):
+    """Turn a part so its `down` face ("-Z", "+Y", ...) sits on z = 0, centred on the origin."""
+    s = solid.val() if isinstance(solid, cq.Workplane) else solid
+    if BED_ROT[down]:
+        axis, deg = BED_ROT[down]
+        s = s.rotate(cq.Vector(0, 0, 0), cq.Vector(*axis), deg)
+    bb = s.BoundingBox()
+    return s.translate(cq.Vector(-(bb.xmin + bb.xmax) / 2, -(bb.ymin + bb.ymax) / 2, -bb.zmin))
 
 
 # ---------------------------------------------------------------- assembly
@@ -549,8 +972,8 @@ def build(pose):
 
     base, s1 = base_parts()
     shoulder, s2 = shoulder_parts()
-    upper, s3, upper_screws = arm_link(L1)
-    fore, s4, fore_screws = arm_link(L2, h0=28.0, h1=30.8, w_mid=32.0, h_mid=24.0)
+    upper, s3, upper_screws, upper_idler = arm_link(L1)
+    fore, s4, fore_screws, fore_idler = arm_link(L2, **FOREARM)
     wrist, s5 = wrist_parts()
     grip, s6 = gripper_parts()
     caps = hub_caps()
@@ -572,11 +995,13 @@ def build(pose):
     add_servo(a_sh, "servo2_shoulder", s2, 1, a_ua)
 
     a_ua.add(upper, name="upper_arm", color=C_SHELL)
+    a_ua.add(upper_idler, name="upper_arm_idler_plate", color=C_SHELL)
     a_ua.add(caps, name="shoulder_hub_caps", color=C_GRAPHITE)
     a_ua.add(upper_screws, name="upper_arm_screws", color=C_STEEL)
     add_servo(a_ua, "servo3_elbow", s3, 2, a_fa)
 
     a_fa.add(fore, name="forearm", color=C_SHELL)
+    a_fa.add(fore_idler, name="forearm_idler_plate", color=C_SHELL)
     a_fa.add(caps, name="elbow_hub_caps", color=C_GRAPHITE)
     a_fa.add(fore_screws, name="forearm_screws", color=C_STEEL)
     add_servo(a_fa, "servo4_wrist_flex", s4, 3, a_wr)
