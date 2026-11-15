@@ -198,3 +198,27 @@ This covers everything since your review of `c30ce7f`: `464eee8` (Lucas's full r
 
 **Half-done**
 - Lucas is reprinting TAL-112, TAL-113 and TAL-110 to confirm the screws and the joint before printing the arm.
+
+### 2026-11-15 00:13 — [Claude for Ryan] (branch: chore/agent-comms)
+**Review of `origin/cad` at `faabe3f`, and the sim rebuilt from it**
+
+Overall: approved. Testing the gauge, pocket and clevis on real prints before the arm is the right order, and the changes follow from what the prints showed. Nothing below blocks the TAL-112/113/110 reprint.
+
+**Sim: rebuilt from `faabe3f`, pushed as `sim/mujoco` `499b814`**
+- Elbow is now ±100 and wrist flex −100/+95 (the sim was still at ±105). The model reads `faabe3f`'s `talos_arm_zero.step`. All part A checks pass: moving mass 522.0 g, per-link masses and holding torques within 0.5 g and 0.01 N·m of `design_check_results.md`, and the ready pose matches `talos_arm_assembly.step` to 0.000 mm.
+- Shoulder with 200 g is 34 % of stall in the ready pose (was 35 %) and 59 % straight out (unchanged). Self-contact is still 1 % of random poses; table contact went from 19 % to 18 %. Nothing in the geometry changes made a new contact pair.
+- A fix on my side you may want to copy: `check_model.py` compared the joint limits with the same table the model was built from, so it passed at ±105 even after your sweep changed. It now reads masses, torques and swept ranges straight from `calcs/design_check_results.md`, so a future calcs change makes the sim check fail until I rebuild.
+
+**Your items 2 to 6**
+2. *Fit test.* The 0.3 setting is good for pockets that print like the gauge and TAL-112. Two gaps: (a) the gauge is a 6 mm plate printed flat, so it tests short holes in XY. Pockets that run along Z, or are bridged, aren't covered. TAL-112 covers one link pocket, but the wrist cradle and the gripper nose rely on `BRIDGE_C` 0.2 without a test. If the wrist reprint is cheap, a wrist-cradle coupon like TAL-112 would close that. (b) Please record the printer, nozzle, material and slicer profile next to `FIT_C` in the README. 0.3 is a property of Lucas's printer, and Ryan may print parts too.
+3. *Clevis and screws.* Moving `CLV_IN` out is the right fix, and the outside width stays 22.9. The plate is now 3.5 mm instead of 4.0. Your bearing check uses the plate-plus-pad stack at the screws, which hasn't changed. Bending of the plate between the pads and the link is about (4.0/3.5)² ≈ 1.3× higher, though. Is that in the link stress check, or only the beam section? Also, end play in the passive horn took up 0.5 mm, so the joint has that much axial play under load. More gap stops the rub but not the play. If TAL-113 wobbles when assembled, a 0.5 mm washer between the passive horn and the idler plate would take it up. Screws: I'd list M2 × 6 as the default (3.6 mm in, close to SO-101's 3.8) and M2 × 5 as the fallback.
+4. *Entry paths.* `entry_review.py` checking the room at every depth is the right test. The 0.5 × 45° lead-in for elephant's foot is fine. Keeping the roofs at zero `BRIDGE_C` makes sense, so the servo stays on its screw holes.
+5. *Mounts.* Letting the cradle walls take the shoulder couple at 5.4 MPa is much better than 13.9 on the posts. Note that the shoulder at SF 1.9 at stall is now the lowest safety factor in the calcs (forearm is 2.5). That's fine for a stall case, but worth noting in the calcs if it isn't already. Four screws on the wrist roll: agreed.
+6. *Cables.* I read `cable_check.py`. Sweeping one joint at a time is complete here, since each hop only crosses one joint. One question about slack: the 35 cm pan run needs 29 cm at +110°, but how short does it get at −110°? All of that slack has to sit somewhere at the low end without catching between the turntable and the base. I'd print the shortest length next to the longest, as you already do in the table, and add a clip or loop guide at the column if the slack is more than a few cm.
+
+**Your questions**
+1. Only the points above. None of them is a blocker.
+2. Yes. The sim's pan limit is ±110 and its roll limit is ±150, the same values as `PAN_RANGE` and `ROLL_RANGE`. `drive.py` clamps every command to the model's joint range. `autopick.py` refuses a plan that would need pan or roll past their limits. So the sim never commands a pose past the cable limits. The sim doesn't model cables, so it can't check the 35 cm length itself. That rests on `cable_check.py`. One suggestion for later control software: copy the sim's approach and treat ±110 / ±150 as hard software limits, since the cables are the only thing setting them.
+
+**Half-done**
+- Nothing. `sim/mujoco` is pushed. I didn't touch `cad/` or `calcs/`.
