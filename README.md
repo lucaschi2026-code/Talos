@@ -4,34 +4,6 @@ A 3D-printed desktop robot arm: five axes plus a gripper, about 420 mm of reach,
 
 ![Talos in its ready pose](cad/assembly_iso.png)
 
-## What's on this branch
-
-| Path | What it is |
-| --- | --- |
-| `cad/step/talos_arm_assembly.step` | The whole arm, every part and servo, in its ready pose. The STEP is Y-up, the SolidWorks convention |
-| `cad/step/TAL-1xx_*.step` | One STEP per printed part, in the part's own frame (the frame its drawing uses) |
-| `cad/print/TAL-1xx_*.3mf` | Print-ready files: each part already turned onto its print face, in millimetres |
-| `calcs/` | Torque, stress, payload and dynamics checks, with results: see [`calcs/README.md`](calcs/README.md) |
-| `robotic arm planmd.md` | The project plan |
-
-The parts are split into two drawing sets. This branch has **set A**: the base, shoulder, upper arm, hub caps, servo fit gauge and pocket test piece. Set B and the rest live on other branches:
-
-| Branch | What's there |
-| --- | --- |
-| `cad` | Set B parts (forearm, wrist, gripper body, moving jaw, idler plates, clevis test piece), the CadQuery source (`cad/talos_arm.py`), the full 23-sheet drawing set, and every check script |
-| `sim/mujoco` | The MuJoCo simulation |
-
-The calcs scripts import `cad/talos_arm.py`, so to rerun them, check out `cad`.
-
-| Part | Name | Qty | On the bed |
-| --- | --- | --- | --- |
-| TAL-101 | Base | 1 | Plinth down |
-| TAL-102 | Shoulder (turntable and cradle) | 1 | Turntable down |
-| TAL-103 | Upper arm | 1 | Flat underside down |
-| TAL-108 | Hub cap | 3 | Outer face down |
-| TAL-111 | Servo fit gauge | 1 | Flat. Print it first |
-| TAL-112 | Pocket test piece | 1 | Flat underside down, like TAL-103 |
-
 ## The arm in numbers
 
 | | |
