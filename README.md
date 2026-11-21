@@ -15,7 +15,6 @@
 
 <img src="cad/assembly_iso.png" alt="Talos in its ready pose" width="560">
 
-**Mechanical design:** Lucas · **Simulation and software:** Ryan
 
 </div>
 
