@@ -18,84 +18,101 @@ A 3D-printed desktop robot arm: five axes plus a gripper, about 420 mm of reach,
 
 ## Design decisions
 
-**SO-101 as the reference, not the template.** SO-101 is a proven arm built on the same servo, so Talos copies its proportions, its servo, and how it holds a servo: the servo slides into the printed part and screws in from outside. The parts themselves are drawn from scratch. There's a 12-sided plinth with a fluted column, and the links are faceted octagonal beams that narrow at the waist, with hex windows.
+### Overall layout
 
-**CAD as code.** The whole arm is one parametric CadQuery script. Every size comes from named constants, so a change, like a new printing clearance, moves every part at once. The print files, STEPs and drawings are all generated from it, so they can't drift apart, and checks run on the generated parts before any file is written.
+**Link lengths: 116 mm shoulder to elbow, 135 mm elbow to wrist.** These are SO-101's lengths. SO-101 is a proven arm built on the same servo, so its proportions are a known-good starting point. The project needed at least 350 mm of reach from the base axis to the gripper tip; these lengths give 402 mm to the tool point, and about 420 mm from the shoulder axis to the tip.
 
-**Pockets built from the real servo.** Every servo pocket is cut from Feetech's own CAD of the STS3215, taken from SO-101's assembly. A script puts that servo model into every Talos part and checks that nothing touches.
+Longer links cost torque, though. The servo's continuous limit is about a third of its 2.94 N·m stall. With the arm straight out and 200 g in the gripper, the elbow is just over that limit (1.08×).
+- **Shorter forearm:** a 115 mm forearm would bring the elbow just under the limit, but it gives up 20 mm of reach for about 9 % less elbow torque.
+- **Choice:** the forearm stays at 135 mm, and the arm follows a simple rule instead: full payload only with the elbow bent.
 
-**Clearance set by a test print.** FDM holes come out a little small. So every pocket is the servo plus a clearance, set from a printed gauge rather than guessed: **0.3 mm** on the case, and 0.4 mm on the rib, bump, spline and boss. That holds for this printer setup (Ender 3 V3 KE, 0.4 mm nozzle, Creality PLA, Creality Print). On a different printer, print TAL-111 first and set the clearance from it.
+**The shoulder sits on the pan axis.** SO-101 puts its shoulder 30 mm in front of the pan axis, which gains it about 40 mm of reach. Talos centres the shoulder instead. That keeps the pan servo's bearing load lower (about 6 % below SO-101's, with 200 g) and makes the arm's reach the same in every direction. The cost is reach, which the 402 mm already covers.
 
-**Every servo has a way in.** Each pocket has a path the servo can slide along, with channels for everything that sticks out of its case: the top rib, the bump by the connectors, the bare output shaft, the idler boss and the plugged-in cables.
-- The shoulder, elbow, wrist flex and jaw servos go in with their horns off; the horns go back on through openings in the shell.
-- The base and wrist roll servos go in with their horns on.
-- A check script slides the real servo along each path and measures the room at every depth. Nowhere is tighter than the seated pocket.
+**Heights: pan horn 62 mm above the table, shoulder axis 46 mm above the pan horn.**
+- **Pan horn height:** the pan servo stands upright inside the base column, with its cable plugs and a cable bend below it, so its horn ends up 62 mm above the table.
+- **Shoulder height:** the shoulder servo hangs in the cradle with 35 mm of its body below its shaft. 46 mm is just enough for that to clear the cradle floor, which carries the turntable's screws into the pan horn. Those go in before the servo.
 
-**Clevis joints, like SO-101.** At the shoulder, elbow and wrist flex, the next link clamps both sides of the servo:
-- **Output horn:** a plate screws onto it and carries the joint's torque.
-- **Passive horn:** the other side, which spins freely on the back of the servo. An idler plate screws onto it and only supports.
-- **Slim idler plates:** the servo's cable plugs sit only 11 mm from the joint axis on that side, so the idler plates are pinched to clear them through the whole joint range.
-- **Separate idler plate:** on the arm links, it's a separate part (TAL-110), so the link prints without support.
-- **Gap:** both plates turn 1.0 mm clear of the shell they straddle.
+**Wrist to roll flange: 63 mm.** That's the shortest distance that keeps the roll servo's cable plugs clear of the forearm's end as the wrist bends. It was first 3 mm shorter, and the plugs hit.
 
-**Everything prints flat, without support.** Each part's print orientation was chosen by measuring its overhangs in all six orientations. Every part sits on one solid first layer, checked by slicing the mesh 0.2 mm above the bed. Two print effects are designed in:
-- **Elephant's foot:** where a servo goes in through the face a part prints on (the arm links), there's a 0.5 mm × 45° lead-in.
-- **Bridge sag:** pocket walls that print as long bridges along the servo's whole way in get 0.2 mm more room.
+**Gripper: 108 mm from the roll flange to the jaw tip, 20 mm fingers.** The jaw opens 115°, about 67 mm between the tips, so it can close on objects up to about 60 mm across. The fingers are centred on the roll axis, so rolling the wrist turns the grip about its own centre. Grip force is 23 N continuous at mid-jaw, so a 200 g object needs only a sixth of it.
 
-**Screws.**
-- Horn screws are M3 × 6 everywhere, with 1.65 to 2.5 mm of thread in the horn, ending short of the servo case.
-- Every servo case screw seat takes either an M2 × 6 or an M2 × 5: there's 2.4 mm of print under each head, so a 6 mm screw goes 3.6 mm into the case and a 5 mm one goes 2.6 mm.
+**Base: a 132 mm, 12-sided plinth with four M4 holes on a 108 mm circle.** With the arm straight out, the whole arm's centre of mass is 188 mm from the pan axis but the base's edge is only 64 mm out, so the arm tips over unless the base is fixed down. Two of the bolts need only about 6 N each, so small M4 bolts or a table clamp hold it. The 80 mm column holds the pan servo upright, with a deck behind it for the servo bus board.
 
-**Servo mounts.**
-- **Pan and wrist roll servos:** held by four case screws, two at each end, so they can't rock in their pockets.
-- **Shoulder servo:** its twisting load goes into the cradle's two long walls rather than the slender posts beside its shaft.
+### Holding the servos
 
-**Wiring.** The servos are daisy-chained from a Waveshare bus adapter on a deck behind the base column. Each cable crosses its pitch joint on the joint's axis, so turning the joint barely changes its length.
-- The pan → shoulder run winds round the column as the arm pans, so it needs a 35 cm cable.
-- The wrist roll → jaw run winds round the roll axis, so it needs a 30 cm cable.
-- The servos' own 21 cm cables do the other four runs.
-- A clip on the back of the column keeps the pan cable's slack loop away from the turntable.
+**Pockets 0.3 mm bigger than the servo all round.** FDM holes come out a little small. 0.3 mm is the clearance that slid smoothly on a printed test gauge (TAL-111, six windows from 0.2 to 0.7 mm); 0.2 was snug.
+- **Why not 0.2:** a real pocket is four times deeper than the gauge and the parts are bigger, so 0.2 leaves no margin.
+- **What locates the servo:** the screws, not a press fit.
+- **Features that only pass through:** the rib, the bump by the connectors, the shaft and the boss get 0.4 mm.
+- **Printer:** these numbers belong to the printer setup used (Ender 3 V3 KE, 0.4 mm nozzle, Creality PLA, Creality Print). On another printer, print the gauge first.
 
-**Loads, and what was accepted.** With the arm straight out and 200 g in the gripper, the shoulder holds at 59 % of stall. That's over the usual 1/3-of-stall rule for continuous load (the sim agrees). For v1 this is accepted: full payload only with the elbow bent, which covers top-down picks out to 195 mm from the base. The shoulder load gets measured once the arm is built. The base tips over at full reach unless it's clamped or bolted down, so the plinth has four counterbored M4 holes.
+**Shell walls 18.4 mm from the servo's centre plane.** That's the servo's half-thickness (16.5 mm on the connector side), plus the 0.3 mm clearance, plus a 1.6 mm wall. Thin walls keep the joints narrow: with the clevis plates outside them, every joint is under 46 mm wide. Where a screw head needs more under it, it sits on a small pad instead of a thicker wall.
 
-## Problems and how they were solved
+**Case screws: 2.4 mm of print under every head.** The servos' screws may be M2 × 5 or M2 × 6. A 2.4 mm wall suits both: a 5 mm screw gets 2.6 mm of thread in the servo, and a 6 mm screw goes 3.6 mm in, short of the 3.8 mm SO-101 uses.
+
+**Four screws on the pan and wrist roll servos.** Each has two screws at each end. The pan servo carries the whole arm's overturning moment, and with screws at one end only it could rock in its 0.3 mm of clearance. With four, the worst screw carries 38 N.
+
+**Shoulder cradle: the posts beside the shaft stand 0.9 mm off the servo.** As the shoulder servo works, its body tries to twist about its screws.
+- **Before:** the posts were the first thing it reached. They're slender (4.1 mm then), and at stall they would have seen 13.9 MPa across their layer lines, over PLA's 10 MPa long-term limit.
+- **Now:** with the posts set back, the servo bears on the cradle's two long walls instead: 5.4 MPa at stall.
+
+### The joints
+
+**Clevis joints that clamp both sides of each servo.** At the shoulder, elbow and wrist flex, the next link screws onto both of the servo's horns, like SO-101.
+- **Output horn (shaft):** carries the torque.
+- **Passive horn:** turns freely on the back of the servo, so the joint is supported on both sides instead of hanging off one shaft.
+
+**Clevis plates 1.0 mm clear of the shell, 3.5 mm thick.**
+- **Gap:** the gap was first 0.5 mm, and the printed test joint rubbed. 1.0 mm leaves room for elephant's foot on the shell's edge and end play in the passive horn.
+- **Pads:** a Ø19 mm pad on each plate's inside reaches the horn. The horn screws go through pad and plate, so they stay M3 × 6.
+- **Strength:** at 3.5 mm, the plates bend at a safety factor of 3 or more when holding a load.
+
+**Output plates have a 16 mm radius hub; idler plates a 10.5 mm hub, pinched to a 17 mm neck.**
+- **Output side:** the hub takes the horn's four screws on a 14 mm circle, with a wide root into the link.
+- **Passive side:** the servo's cable plugs sit only 11 mm from the joint axis, so the idler plate is just big enough to cover the passive horn (Ø19.2 mm) and narrow enough to pass the plugs through the whole joint range.
+
+**Shell openings: 10.8 mm radius around each horn.** The horns are 9.6 mm in radius, so they can come off and go back on through the shell, with 1.2 mm to spare. Four servos have to go in with their horns off, so the horns are refitted through these openings.
+
+**Joint ranges ±100° at the shoulder and elbow, −100° to +95° at the wrist.**
+- **What sets them:** 5° past each limit, either an idler plate touches the parent servo's plugs, or one link meets the next.
+- **SO-101:** its elbow is ±97°, so this matches it.
+- **Pan and wrist roll:** no mechanical stop; their cables set the limits (±110° and ±150°).
+
+### The links
+
+**Waisted, faceted octagonal beams with windows.** The shoulder is the limiting servo, and every gram further out costs shoulder torque, so mass comes out where it's cheapest:
+- **The beam:** narrows at the waist (34 mm wide and 25 mm tall on the upper arm), between the full-size clevis at one end and the servo shell at the other.
+- **Windows:** twin hex windows take out more.
+- **Spine:** a raised spine along the top puts some stiffness back.
+
+The result: the moving arm is 522 g, 70 % of it servos. The worst link stress is 5.8 MPa (safety factor 1.7), at the upper arm's elbow end, where the floor is open for the servo to go in. Tip sag from bending is about 2.3 mm.
+
+**Flat underside, taper on top only.** The links print standing on a flat underside, so they need no support and sit on one solid first layer. The waist dips on the top side only for the same reason.
+
+**Separate idler plates on the arm links.** If the idler plate were part of the link, the gap between the two clevis plates would need support under it. As a separate part (TAL-110) screwed into a pocket in the beam, everything prints flat.
+
+**Openings through the print bed face get a 0.5 mm × 45° lead-in.** The arm links take their servo from below, through the face they print on. That's where elephant's foot makes the first layers flare inward, exactly where the servo has to start, so the chamfer opens that edge.
+
+**Pocket walls that print as bridges get 0.2 mm more room.** On the wrist and gripper, one pocket wall prints as a 25–33 mm bridge along the servo's whole slide. Bridges sag, so those walls stand back a little further.
+
+### Cables
+
+**Each cable crosses its joint on the joint's axis,** just outside the idler plate, so bending that joint barely changes the cable's length. A 21 cm cable then covers the shoulder, elbow and wrist runs with room to spare.
+
+**The two runs that wind round a turning axis need longer cables.**
+- **Pan → shoulder:** wraps part way round the column as the arm pans, and needs a 35 cm cable.
+- **Wrist roll → jaw:** winds round the roll axis, and needs a 30 cm cable.
+- **Slack:** each changes length by about 10 cm over its joint's travel, so one end of the travel leaves a loose loop. A clip on the back of the column holds the pan cable below the turntable's edge, so its loop can't catch there.
+
+## The five biggest problems, and how they were solved
 
 | # | Problem | Cause | Fix |
 | --- | --- | --- | --- |
-| 1 | The first printed parts didn't take the servos | The servo model came from SO-101's simplified simulation mesh, which is up to 1 mm small in places. The pockets also had only 0.3 mm clearance with no allowance for FDM | Rebuilt the servo from Feetech's own CAD, measured feature by feature, and gave every pocket a printing clearance |
-| 2 | Most servos had no way in: the shaft and the rib on top caught on the walls | The pockets were only checked with the servo already in place | Every pocket now has a swept entry path with channels for each part that sticks out. Four servos go in with their horns off |
-| 3 | The bump under the servo's wire ports was deeper than planned | Same cause as #1 | Measured from Feetech's CAD. Its channel runs the whole way in, and a 1.4 mm thickening keeps 0.9 mm of wall over it |
-| 4 | The bottom case screw holes were 0.25 mm off | Taken from the simulation mesh | Hole positions measured on Feetech's CAD and checked by script against it |
-| 5 | The pan servo was held by two screws at one end and could rock under the arm's overturning load | Only one hole pair was used | The servo has a second pair beside the shaft. Now four screws, worst case 38 N each |
-| 6 | Two screws holding the gripper to the roll horn couldn't be fitted | The pocket floor blocked their heads | Their counterbores run on as grooves in the floor. They're fitted with the short leg of a hex key |
-| 7 | How much clearance does this printer actually need? | FDM holes print small, by an amount that depends on printer, filament and slicer | A six-window test gauge (TAL-111), 0.2 to 0.7 mm. The servo was snug through 0.2 and smooth through 0.3, so the pockets went from 0.4 to 0.3 mm. A check confirms Feetech's servo passes every window in CAD, so a tight window means the printer |
-| 8 | A flat gauge can't test a real pocket's full depth, bridged roof or entry through the bed face | | A test piece cut straight from the upper arm (TAL-112). The servo went in smoothly |
-| 9 | Elephant's foot narrows an opening exactly where the servo starts in | The arm links take their servo through their print face | A 0.5 mm × 45° lead-in round those openings |
-| 10 | A pocket wall that prints as a bridge can sag onto the servo along its whole slide | Print orientation: the wrist cradle floor and the gripper's nose | 0.2 mm extra room under those walls only. The link pocket roofs got none, so the servo still lines up with its screw holes |
-| 11 | The clevis plates rubbed on the shell as the elbow test joint turned | Only 0.5 mm of gap; elephant's foot and the passive horn's end play took it up | Plates moved out to 1.0 mm clear. Their pads grew by the same 0.5 mm, so the screws didn't change |
-| 12 | The servo screws measured about 5 mm by ruler, which could mean 5 or 6 | Some seats were designed for M2 × 6; with M2 × 5 a few would barely grip and others would bottom out | Every seat now has 2.4 mm of print under the head, so either length works. The code checks both at every seat |
-| 13 | The shoulder cradle's posts were overstressed at servo stall (13.9 MPa, over PLA's 10 MPa long-term limit) | The posts stood closer to the servo in angle than the cradle walls, so they took its twisting load | Posts moved 0.4 mm back. Now the cradle walls take it, 5.4 MPa at stall |
-| 14 | The wrist roll servo could rock, like the pan servo in #5 | Two screws at one end only | Four screws, through the bridge lug |
-| 15 | Two cable runs were longer than the 21 cm servo cables | Those two runs wind round a turning axis (pan and wrist roll) | A script measures every run through its joint's travel. Those two runs get 35 cm and 30 cm cables |
-| 16 | The longer pan cable has about 14 cm of slack at the other end of its travel, which could catch under the turntable | Any cable long enough at one end is that much too long at the other | A clip on the back of the column holds the cable below the turntable's edge, and the loop hangs free between the clips |
-| 17 | The idler plate hovered just above the passive horn on the test joint | The passive horn has end play on its boss, so where it sits depends on how the joint is put together | Assembly order: attach the idler plate to the clevis first, then fit the clevis to the horns. The joint then went together flush |
-| 18 | Thinner clevis plates after #11: are they still strong enough? | Ryan's review found the calcs only checked the screws, not the plate | A plate bending check: safety factor 3 or more when holding, and 1.1 to 1.8 at servo stall (a short event, against the long-term limit) |
-
-## How the design is checked
-
-These run on the `cad` branch, on the same geometry that goes into the print files. A print file is only written if its part passes.
-
-- **Dimension checks (`part_checks.py`, 384 checks):** rays cast at every hole, pocket wall, plate and pad on the print mesh itself.
-- **Real servo (`servo_reference.py`):**
-  - Feetech's servo in every pocket, with 0.25 to 0.3 mm of room on every side.
-  - Its slide in and out, and each horn's way back through its opening.
-  - The screw holes, and the horn screws' thread.
-- **Entry paths (`entry_review.py`):** the room round the servo at every depth on its way in.
-- **Joint travel (`joint_sweep.py`):** each joint turned until anything touches, plugs and screw heads included.
-- **Cables (`cable_check.py`):** every bus run through its joint's travel.
-- **Calcs (`calcs/design_check.py`):** torques, link and plate stresses, screw bearing, payload envelope, dynamics and tipping.
-
-Ryan's Claude Code reviewed each round of changes, and the MuJoCo sim on `sim/mujoco` is rebuilt from the same STEP files. Its masses, torques and joint ranges match the calcs.
+| 1 | **The first printed parts didn't take the servos** | The servo model came from SO-101's simplified simulation mesh, which is up to 1 mm small in places and missing features. The pockets also had too little clearance for FDM | Every pocket was rebuilt from Feetech's own CAD of the STS3215, measured feature by feature. A script now puts that real servo in every part and checks it fits |
+| 2 | **Most servos had no way into their part** | Only the seated servo was checked. On the way in, its output shaft and the rib on its top face caught on the walls | Every pocket got a path the servo can slide along, with channels for everything that sticks out. Four servos go in with their horns off, and the horns are refitted through openings in the shell. A script slides the real servo in and checks there's no tight spot anywhere |
+| 3 | **Nobody knew how much clearance this printer needed** | FDM holes print small, by an amount that depends on the printer, filament and slicer | Three test prints before the arm: a six-window gauge (0.2–0.7 mm), a real pocket cut from the upper arm, and a real elbow joint. The pockets went from 0.4 to 0.3 mm, and the lead-ins and bridge room were added for the print effects the gauge can't show |
+| 4 | **The elbow test joint rubbed as it turned** | The clevis plates were only 0.5 mm off the shell. Elephant's foot and the passive horn's end play took that up | The plates moved out to 1.0 mm clear, with taller pads so the horn screws didn't change. The idler plate now goes onto the clevis first, which lines it up flush with the free-spinning passive horn |
+| 5 | **Two cable runs were longer than the servos' 21 cm cables** | The pan and wrist roll runs wind round a turning axis, so they need about 10 cm more at one end of the travel | A script measures every run through its joint's travel. Those two runs got 35 cm and 30 cm cables, and a column clip manages the pan cable's slack loop |
 
 ## Printing
 
@@ -111,10 +128,3 @@ Ryan's Claude Code reviewed each round of changes, and the MuJoCo sim on `sim/mu
   - one 35 cm and one 30 cm 3-pin bus servo cable (the servos' own 21 cm cables do the other four runs)
   - 4 × M4 bolts or a clamp to fix the base down
 
-## Status
-
-- **Done:** the servo pocket and elbow joint test pieces pass on real prints.
-- **Next:**
-  - print the arm
-  - measure the shoulder's real load against the 1/3-of-stall rule
-  - drive it from the sim's control code
