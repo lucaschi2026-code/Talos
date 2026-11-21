@@ -48,7 +48,7 @@
 | **Cables cross on the joint axes** | Bending a joint barely changes the cable's length, so the stock 21 cm cables reach |
 | **Clamped base (4 × M4)** | At full reach the arm's centre of mass is 188 mm out, but the base edge is only 64 mm out |
 
-## Five problems I solved
+## Five problems We solved
 
 | Problem | Fix |
 | --- | --- |
