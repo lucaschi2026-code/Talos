@@ -9,7 +9,7 @@
 ![522 g moving mass](https://img.shields.io/badge/moving%20mass-522%20g-2f6fdb?style=for-the-badge)
 <br>
 ![Feetech STS3215](https://img.shields.io/badge/servos-Feetech%20STS3215-555?style=flat-square)
-![Solidworks](https://img.shields.io/badge/CAD-CadQuery%20%28Python%29-555?style=flat-square)
+![SolidWorks](https://img.shields.io/badge/CAD-SolidWorks-555?style=flat-square)
 ![PLA](https://img.shields.io/badge/printed-PLA-555?style=flat-square)
 ![MuJoCo](https://img.shields.io/badge/sim-MuJoCo-555?style=flat-square)
 
