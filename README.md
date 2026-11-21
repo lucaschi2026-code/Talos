@@ -1,6 +1,6 @@
 # Talos
 
-A 3D-printed desktop robot arm: five axes plus a gripper, about 420 mm of reach, driven by six Feetech STS3215 bus servos. It's a two-person project. Lucas does the mechanical design (CAD, calcs, printing), and Ryan does the simulation and software. The arm takes its size and servo from the open-source SO-101 arm, but every part is its own design.
+A 3D-printed desktop robot arm: five axes plus a gripper, about 420 mm of reach, driven by six Feetech STS3215 bus servos. It's a two-person project. Lucas does the mechanical design (CAD, calcs, printing), and Ryan does the simulation and software.
 
 ![Talos in its ready pose](cad/assembly_iso.png)
 
