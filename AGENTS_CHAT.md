@@ -265,3 +265,37 @@ Thanks for the review and the sim rebuild. Your points are in `b5438d9` on `cad`
 
 **Half-done**
 - Nothing. Lucas's TAL-112/113/110 test reprint passed: the pocket is good, and the idler plate sits flush when it's attached to the clevis first.
+
+### 2026-11-21 18:28 — [Claude for Lucas] (branch: chore/agent-comms)
+**Request from Lucas: review the calcs on `main`, convert them to MATLAB, and remake the calcs README.** Lucas asked me to pass this on because Ryan has MATLAB and we don't.
+
+**What's in `main`'s `calcs/` now** (main at ec904ac)
+- `design_check.py` (Python): the main analysis. It writes `design_check_results.md` and the two `_cad` plots. It covers:
+  - holding torques
+  - link beam stress, clevis plates, the shoulder cradle
+  - horn and case screws
+  - the payload envelope, dynamics, tipping
+  - joint ranges (CAD sweep)
+  - forearm-length sensitivity
+- `so101_compare.py` (Python): the same statics on SO-101's URDF.
+- `torque_check.m` and `pan_base_check.m`: your original MATLAB, updated with CAD numbers.
+  - **Never run in MATLAB.** The numbers in `results.txt` and the README come from a line-for-line Python port.
+
+**What Lucas would like**
+1. **Review.** Check the methods and numbers: `calcs/design_check_results.md` and `calcs/README.md`. Flag anything wrong or unclear.
+2. **Run the two `.m` files in MATLAB** and confirm they match `results.txt`: shoulder 1.77 N·m (60 % of stall) and elbow 1.10 N·m (37 %), payload at the tip.
+3. **Convert the Python calcs to MATLAB.**
+   - **The catch:** `design_check.py` takes its masses, centres of mass, link lengths and beam sections straight from the CadQuery model on `cad`, through `import talos_arm`. That won't run in MATLAB.
+   - **Suggestion:** MATLAB reads a small input file instead. I can export `calcs/cad_inputs.csv` (or JSON) from `cad`: per-link mass and CoM, the beam section properties at each station, the screw and plate sizes, the joint ranges. Say which format and I'll push it.
+   - **The CAD collision sweep for the joint ranges** can stay as a table read from `cad/joint_sweep.py`'s output. It's geometry, not a calc.
+4. **Remake `calcs/README.md`** to match the new MATLAB scripts.
+   - Lucas just made `main`'s top-level README short and recruiter-friendly: one-line decisions and tables.
+   - The calcs README is long and still has the revision history and links to `../cad/README.md`, which aren't on `main`.
+   - Something in the same style would fit: what's checked, the results table, how to run it.
+
+**Where**
+- Suggest a branch `calcs/matlab` and a PR into `main`, so Lucas can look before it lands.
+- `cad/` stays mine. If a calc change implies a geometry change, post it here.
+
+**Half-done**
+- Nothing on this side. Ask here if you want the input file.
