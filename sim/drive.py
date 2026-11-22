@@ -45,6 +45,10 @@ CONTINUOUS = STALL / 3         # N*m: rule of thumb from calcs/ for sustained lo
 
 def prepare(m):
     """Set the jaw's squeeze and return how far a target may lead its joint."""
+    built = m.actuator_forcerange[0, 1]
+    if not np.isclose(built, STALL):
+        raise SystemExit(f"The model's stall torque is {built} N*m (from calcs/), but STALL in drive.py is {STALL}. "
+                         "Update STALL to match.")
     m.actuator_forcerange[JAW] = (-CONTINUOUS, CONTINUOUS)  # like the servo's torque-limit setting
     # Enough lead to reach stall torque while moving at jog speed, and no more.
     return (STALL + m.actuator_biasprm[:6, 2] * -JOG_SPEED) / m.actuator_gainprm[:6, 0]
@@ -116,8 +120,8 @@ def status_text(d, load, props=()):
 
 
 def help_text(pick, moving):
-    names = JOINTS + ["reset"]
-    keys = [f"{key_label(a)} / {key_label(b)}" for a, b in KEYMAP.values()] + ["R"]
+    names = JOINTS + ["reset", "quit"]
+    keys = [f"{key_label(a)} / {key_label(b)}" for a, b in KEYMAP.values()] + ["R", "Esc"]
     if pick:
         names += ["auto pick", "pick + drop in box", "move block / box"]
         keys += [key_label(AUTO_KEY), key_label(DROP_KEY), f"{key_label(MOVE_KEY)}  ({moving or 'off'})"]
@@ -411,7 +415,9 @@ def main():
     def on_key(_, key, __, action, ___):
         if action != glfw.PRESS:
             return
-        if key == glfw.KEY_R:
+        if key == glfw.KEY_ESCAPE:
+            glfw.set_window_should_close(window, True)
+        elif key == glfw.KEY_R:
             reset()
         elif block and key == AUTO_KEY:
             toggle_auto()

@@ -34,6 +34,7 @@
     <mesh name="base__hull3" file="collision/base__hull3.stl"/>
     <mesh name="base__hull4" file="collision/base__hull4.stl"/>
     <mesh name="base__hull5" file="collision/base__hull5.stl"/>
+    <mesh name="base__hull6" file="collision/base__hull6.stl"/>
     <mesh name="shoulder_link__horn" file="visual/shoulder_link__horn.stl"/>
     <mesh name="shoulder_link__plug" file="visual/shoulder_link__plug.stl"/>
     <mesh name="shoulder_link__servo" file="visual/shoulder_link__servo.stl"/>
@@ -155,7 +156,7 @@
     <light pos="0.4 -0.4 1.2" dir="-0.3 0.3 -1" diffuse="0.5 0.5 0.5"/>
     <geom name="table" type="plane" size="1 1 0.05" material="table" contype="2" conaffinity="11" friction="0.3 0.005 0.0001" condim="4"/>
     <body name="base">
-      <inertial pos="-0.009169 0 0.026731" mass="0.225535" fullinertia="0.000184297 0.000289699 0.000321244 -0 -0.000015017 -0"/>
+      <inertial pos="-0.009176 0 0.026734" mass="0.225848" fullinertia="0.000184577 0.000290158 0.000321731 -0 -0.00001497 -0"/>
       <geom class="visual" mesh="base__pcb" material="pcb"/>
       <geom class="visual" mesh="base__plug" material="plug"/>
       <geom class="visual" mesh="base__servo" material="servo"/>
@@ -167,6 +168,7 @@
       <geom class="collision" mesh="base__hull3"/>
       <geom class="collision" mesh="base__hull4"/>
       <geom class="collision" mesh="base__hull5"/>
+      <geom class="collision" mesh="base__hull6"/>
       <body name="shoulder_link" pos="0 0 0.062">
         <joint name="pan" class="sts3215" axis="0 0 1" range="-1.919862 1.919862"/>
         <inertial pos="-0.00003 -0.000189 0.024992" mass="0.097815" fullinertia="0.000040799 0.000037749 0.000027334 -0.000000026 -0.000000012 0.000000177"/>

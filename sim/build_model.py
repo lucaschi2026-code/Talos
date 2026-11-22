@@ -62,9 +62,19 @@ VISUAL_COLOURS = {"shell": "C_SHELL", "graphite": "C_GRAPHITE", "servo": "C_SERV
 
 # ---------------------------------------------------------------- inputs from the CAD and calcs
 
+def require(path):
+    """Stop with a clear message if a CAD or calcs input is missing. The main branch carries the
+    generated model, so drive.py runs there, but building and checking it need the CAD source."""
+    if not path.exists():
+        raise SystemExit(f"{path.relative_to(ROOT)} isn't here. Building or checking the model needs the CAD "
+                         f"source, which is on the cad branch (git checkout cad). drive.py doesn't need it.")
+    return path
+
+
 def read_constants(path):
     """Module-level literals and cq.Color(r, g, b) calls, read without importing the file."""
     out = {}
+    require(path)
     for node in ast.parse(path.read_text(encoding="utf-8")).body:
         if not isinstance(node, ast.Assign):
             continue
@@ -132,7 +142,7 @@ def read_step(path):
     doc = TDocStd_Document(TCollection_ExtendedString("step"))
     reader = STEPCAFControl_Reader()
     reader.SetNameMode(True)
-    if reader.ReadFile(str(path)) != IFSelect_RetDone or not reader.Transfer(doc):
+    if reader.ReadFile(str(require(path))) != IFSelect_RetDone or not reader.Transfer(doc):
         raise RuntimeError(f"could not read {path}")
     tool = XCAFDoc_DocumentTool.ShapeTool_s(doc.Main())
 

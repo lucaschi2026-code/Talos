@@ -1,6 +1,8 @@
 # Talos simulation
 
-A MuJoCo model of the Talos arm, built from the CAD in [`../cad`](../cad). Use it to drive the arm from the keyboard, check what it can reach and lift, and find problems before printing.
+A MuJoCo model of the Talos arm, built from the CAD source on the [`cad` branch](https://github.com/lucaschi2026-code/Talos/tree/cad/cad). Use it to drive the arm from the keyboard, check what it can reach and lift, and find problems before printing.
+
+The generated model is in `sim/model/`, so driving the arm and the auto pick test work on any branch. Rebuilding the model (`build_model.py`) and the full check (`check_model.py`) also need `cad/talos_arm.py`, the zero-pose STEP and `calcs/`, so run those on the `cad` branch.
 
 ![Pick sequence](renders/pick.png)
 
@@ -11,6 +13,7 @@ On Windows, double-click `sim\run.bat`, or run it from a terminal:
 ```bat
 sim\run.bat                       :: drive the arm, with a 200 g block and a box to drop it in
 sim\run.bat drive.py             :: just the arm
+sim\run.bat test_autopick.py     :: auto pick and drop, no window
 sim\run.bat check_model.py --fast
 sim\run.bat build_model.py
 ```
@@ -29,7 +32,8 @@ Keep the environment outside OneDrive, because it holds thousands of files. Then
 ```bash
 python sim/drive.py              # drive the arm
 python sim/drive.py --pick       # with a 200 g block and a box to drop it in
-python sim/check_model.py        # re-run every check and save the results (several minutes)
+python sim/test_autopick.py      # auto pick and drop across the workspace, no window (about a minute)
+python sim/check_model.py        # re-run every check and save the results and renders (several minutes)
 python sim/check_model.py --fast # quicker version, prints only
 python sim/build_model.py        # rebuild the model after a CAD change
 ```
@@ -47,6 +51,7 @@ Hold a key to move a joint. Left drag orbits the view, right drag pans and scrol
 | Wrist roll | Q | E |
 | Gripper (+ opens) | O | L |
 | Back to the ready pose | R | |
+| Quit | Esc | |
 | Auto pick (with `--pick`) | G | |
 | Auto pick and drop in the box (with `--pick`) | P | |
 | Move the block, the box, or neither (with `--pick`) | B | |
@@ -69,7 +74,9 @@ Press G or P again, or any driving key, to stop it and take over. It works out t
 
 Press **B** (or click the **Move** button) to switch between moving the block, moving the box, and neither. Slide it with the arrow keys (relative to your view) or drag it with the mouse, and turn it with Z / X. R puts the arm back, and the block and box where you last left them.
 
-The auto pick reaches a block whose centre is about 155–220 mm from the base axis, within the ±110° pan range. The drop works with the box about 180–300 mm out, and not right next to the block or in the way of the lift. Outside that, it says why it can't before it starts.
+The auto pick reaches a block whose centre is about 165–220 mm from the base axis (160 mm if it's turned), up to about 100° of pan either way. The drop works with the box about 180–300 mm out, within about 105° of pan, and not right next to the block or in the way of the lift. Two tighter spots are refused too: a box at 180 mm across the base from a block close in, and a box across the base and nearer to it than the block, which needs a long swing and then a pull-in that tilts the block out of the jaw. Outside that, it says why it can't before it starts.
+
+`test_autopick.py` checks all of this without a window: 42 block and box placements that must either drop the block in the box or be refused before the arm moves. Run it after changing the model, the jaw or `autopick.py`.
 
 The box is a 70 mm square open tray with 35 mm walls. It's added in `drive.py`, not `build_model.py`, so it doesn't change the generated model or `check_model.py`'s tests.
 
@@ -81,11 +88,11 @@ The readout shows each joint's angle and its motor torque averaged over about 1 
 
 | Input | Source |
 | --- | --- |
-| Shapes | `cad/talos_arm_zero.step` |
-| Joint positions | `cad/talos_arm.py`, checked against the STEP on every build |
+| Shapes | `cad/talos_arm_zero.step` (`cad` branch) |
+| Joint positions | `cad/talos_arm.py` (`cad` branch), checked against the STEP on every build |
 | Masses | The PLA model in `calcs/design_check.py`: 1.24 g/cm³, 1.2 mm perimeters, 20 % infill, 61 g per servo |
 | Shoulder, elbow, wrist flex and gripper limits | CAD collision sweep in `calcs/design_check_results.md` |
-| Pan and wrist roll limits | Cable limits in `cad/README.md` (±110°, ±150°) |
+| Pan and wrist roll limits | Cable limits in `cad/README.md` on the `cad` branch (±110°, ±150°) |
 | Stall torque | 2.94 N·m, as in `calcs/` |
 | Servo gains, damping, friction, rotor inertia | The SO-101 MuJoCo model, which uses the same servo. **Not measured on Talos** |
 | Grip friction | 0.3, as in the design check |
@@ -101,7 +108,7 @@ What the simulation adds:
 - **Speed costs torque.** With 200 g, lifting the shoulder 90° in 1.0 s stalls the servo for about 0.65 s and it falls about 9° behind. At 1.5 s it keeps up, at 94 % of stall. The design check's 72 % matches the same move going downhill, where gravity helps. This depends on the SO-101 damping value, so measure it on the real arm.
 - **Block size is limited by the pivoting jaw.** Wider blocks sit in a steeper wedge and squeeze out. At friction 0.3 the jaw holds a 200 g cube up to 25 mm and drops it from 30 mm. At friction 0.5 it holds up to 40 mm. Grip pads or a rubber coating would help most. The model uses flat pads, so real serrations may do better.
 - **How you lift matters as much as how you grip.** With the block held, lifting with the elbow alone (K) kept it at every spot tested, 155–220 mm out and turned up to 40°. Tilting the wrist up (U) while holding squeezes the block out of the pivoting jaw, even with U alone. S and K together also drop it, though each holds alone, and S alone drops it beyond about 200 mm. A straight-up lift needs U, so lift with K and accept a slight swing. So does stop-start motion: moving in 5 mm steps dropped the block even at a slow average speed, while one smooth hold didn't. Check this on the real gripper, because grip pads would change it.
-- **Carrying works one joint at a time.** Pan, shoulder and elbow each moved alone kept the block in the jaw while it was carried to the box, across 61 block and box placements. With the box at its closest workable distance and on the far side, the block sometimes slips out at the end of the reach, just before the jaw opens. It still lands in the box.
+- **Carrying works one joint at a time, turning before reaching.** Pan, shoulder and elbow each moved alone kept the block in the jaw on the way to the box in every placement `test_autopick.py` tries. Reaching before turning was worse: pulling the block in at the pick spot dragged it into the table, and swinging with the arm reached out let it creep further along the fingers. On a long swing the block creeps about 10 mm along the fingers, so a pull-in after a swing of more than 160° drops it once it tilts the gripper by about 5°. The auto pick refuses those. Arriving against the pan stop at ±110° also jolts it out, so the carry stays 3° inside every joint limit.
 - **Single-joint limits don't cover every pose.** About 1 % of poses inside the limits touch the arm itself and 19 % hit the table, so control software should check a pose before moving to it.
 
 ## Simplifications
@@ -113,4 +120,4 @@ What the simulation adds:
 
 ## Smart App Control
 
-`mujoco` is pinned to 3.8.0 because Windows Smart App Control, which is on for this PC, blocks a plugin DLL in the newest release. It also blocks part of VTK, which stops `cadquery` importing here, so `cad/talos_arm.py` and `calcs/design_check.py` won't run on this machine as they are. `build_model.py` avoids `cadquery` by reading the STEP with OCP, the CAD kernel underneath it. It needs the STEP files to be up to date, so re-export them on a machine that can run `talos_arm.py` after a CAD change.
+`mujoco` is pinned to 3.8.0 because Windows Smart App Control, which is on for Ryan's PC, blocks a plugin DLL in the newest release. `build_model.py` doesn't need `cadquery`: it reads the STEP with OCP, the CAD kernel underneath it, because Smart App Control has at times blocked part of VTK, which `cadquery` imports. So it needs the STEP files to be up to date: after a CAD change, re-export them with `cad/talos_arm.py` first.

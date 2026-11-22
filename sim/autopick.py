@@ -31,6 +31,11 @@ GRIPPING_FOR = 0.15           # s at the jaw's torque limit before letting go of
 HOLD_FOR = 1.0                 # s to hold the block up before calling it picked
 CLEAR = 0.012                  # m the held block's lowest corner and the fingertip stay above the box walls
 BACK_AWAY = np.radians(10)     # elbow up this far after letting go, so the fingers clear the box
+CARRY_MARGIN = np.radians(3)   # the carry stays this far inside every joint limit: arriving against the pan stop
+                               # with the block held jolts it out of the jaw (test_autopick.py, box at 110 deg)
+LONG_SWING = np.radians(160)   # a carry that pans further than this, and then tilts the gripper by pulling
+PULL_IN_TILT = np.radians(4.6) # in more than this (as planned before starting), drops the block. Found by
+                               # test_autopick.py, between 4.3 (held) and 4.9 (dropped): see _check_box_plan
 
 
 def wrap(a):
@@ -225,7 +230,7 @@ class AutoPick:
                         dx[k] += 1e-5
                         J[:, k] = (self._block_in_hand(dx, rel)[0] - p) / 1e-5
                     x[:3] += np.clip(np.linalg.lstsq(J, err, rcond=None)[0], -0.2, 0.2)
-                if np.linalg.norm(err) > 1e-3 or not all(self.low[j] + 0.01 < x[j] < self.high[j] - 0.01
+                if np.linalg.norm(err) > 1e-3 or not all(self.low[j] + CARRY_MARGIN < x[j] < self.high[j] - CARRY_MARGIN
                                                          for j in range(3)):
                     continue
                 turned = np.r_[x[0], raised[1:]]
@@ -235,8 +240,8 @@ class AutoPick:
                     if self._path_clear([q, raised, turned, mid, x], rel, tilt, clear):
                         return x, order, up
         r = np.hypot(box["x"], box["y"]) * 1000
-        raise PlanError(f"Can't carry the block over the box {r:.0f} mm out without hitting it. "
-                        f"Move the box (B), to about 180-300 mm from the base.")
+        raise PlanError(f"Can't carry the block over the box {r:.0f} mm out without hitting a wall. Move the box "
+                        f"(B): about 180-300 mm from the base works, a little further out if the block is close in.")
 
     def _check_box_plan(self, c, R_block, opens, q_lift):
         """Before starting: is the box clear of the block, and can the arm reach over it? Uses where the
@@ -245,6 +250,10 @@ class AutoPick:
         reach = box["inner"] + 0.005 + 1.5 * self.half + 0.02   # box centre to block centre when they'd touch
         if np.hypot(c[0] - box["x"], c[1] - box["y"]) < reach:
             raise PlanError("The block is in or right next to the box. Move one of them apart (B).")
+        facing = np.arctan2(box["y"], box["x"])
+        if not self.low[0] + CARRY_MARGIN < facing < self.high[0] - CARRY_MARGIN:
+            raise PlanError(f"The box is at {np.degrees(facing):.0f} deg, at the edge of the pan range "
+                            f"(+-{np.degrees(self.high[0]):.0f} deg). Move it round a little (B).")
         grip = q_lift.copy()
         grip[2] += LIFT
         s = self.scratch
@@ -258,7 +267,16 @@ class AutoPick:
             p, _ = self._block_in_hand(grip + (q_lift - grip) * k, rel)
             if p[2] - 1.8 * self.half < box["top"] + 0.005 and np.hypot(p[0] - box["x"], p[1] - box["y"]) < reach:
                 raise PlanError("The box is in the way of the lift. Move it further from the block (B).")
-        self._solve_carry(q_lift, rel, tilt, margin=0.006)
+        x, _, _ = self._solve_carry(q_lift, rel, tilt, margin=0.006)
+        # The block creeps along the fingers on a long swing, and pulling it in afterwards (shoulder and elbow,
+        # wrist untouched) tilts it out of the pivoting jaw. Reaching first doesn't help: at the pick spot the
+        # pull-in drags it into the table. test_autopick.py: every miss had both, and every success had less of one.
+        # Not wrapped: pan can't go the short way round, through the back, outside its +-110 deg.
+        swing, pull_in = abs(x[0] - q_lift[0]), (x[1] + x[2]) - (q_lift[1] + q_lift[2])
+        if swing > LONG_SWING and pull_in > PULL_IN_TILT:
+            raise PlanError(f"The box is {np.degrees(swing):.0f} deg round and nearer the base than the block: pulling "
+                            "the block in after that long a swing tilts it out of the jaw. Move the box further out, "
+                            "or round toward the block (B).")
 
     def _carry_goals(self, d, turn):
         """Plan the carry from where the block actually is in the jaw, and return the goals for the

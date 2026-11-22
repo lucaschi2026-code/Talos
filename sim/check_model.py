@@ -1,7 +1,7 @@
 """Test the MuJoCo model against the CAD and the design calcs, then report what the physics adds.
 
     python sim/check_model.py            # writes sim/check_results.md and sim/renders/ (several minutes)
-    python sim/check_model.py --fast     # one block width in the grip table; prints only, keeps the saved results
+    python sim/check_model.py --fast     # one block width in the grip table; prints only, keeps the saved results and renders
 
 Part A compares the simulation with numbers it did not get to choose: the "ready" STEP,
 and the tables in calcs/design_check_results.md. A FAIL means the model is wrong.
@@ -385,9 +385,10 @@ def pick_section():
         holder["r"].update_scene(d, holder["c"])
         frames.append((label, holder["r"].render().copy()))
 
-    r = run_pick(25, shoot)
-    holder["r"].close()
-    save_strip(frames, RENDERS / "pick.png")
+    r = run_pick(25, None if FAST else shoot)
+    if not FAST:
+        holder["r"].close()
+        save_strip(frames, RENDERS / "pick.png")
     ok = r["raised"] > 40
     w(f"25 mm cube: **{'held' if ok else 'dropped'}**, raised {r['raised']:.1f} mm. Jaw at {r['angle']:.1f} deg, {r['grip']:.2f} N*m. "
       f"Holding: shoulder {r['hold'][1]:.2f}, elbow {r['hold'][2]:.2f}, wrist {r['hold'][3]:.2f} N*m "
@@ -443,8 +444,8 @@ def main():
     pick_section()
     w("## Summary\n")
     w(f"**{'All CAD and calc checks pass.' if not failures else 'FAILED: ' + ', '.join(failures)}**\n")
-    render_views(m, d)
-    if not FAST:   # a quick run must not replace the full table
+    if not FAST:   # a quick run must not replace the full table or the renders
+        render_views(m, d)
         (HERE / "check_results.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return 1 if failures else 0
 
