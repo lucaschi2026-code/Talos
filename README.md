@@ -63,3 +63,9 @@
 - **Files:** print-ready 3MFs are in [`cad/print/`](cad/print), already turned onto their print face. STEPs are in [`cad/step/`](cad/step).
 - **Order:** print the fit gauge (TAL-111) first, then the test pieces, then the arm.
 - **Calcs:** torque, stress and payload checks are in [`calcs/`](calcs).
+
+## Simulation
+
+- **What:** a MuJoCo model of the arm, built from the CAD, in [`sim/`](sim). Drive it from the keyboard, or let it pick up a 200 g block and drop it in a box by itself.
+- **Run:** on Windows, double-click `sim\run.bat`. It sets up Python the first time. [`sim/README.md`](sim/README.md) has the keys and the other platforms.
+- **Checks:** the model matches the CAD and the calcs: [`sim/check_results.md`](sim/check_results.md). The physics adds what static calcs can't, such as how fast the shoulder can lift 200 g and how wide a block the jaw can hold.

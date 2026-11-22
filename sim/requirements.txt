@@ -1,0 +1,8 @@
+# Python 3.12. Pinned because Smart App Control blocks a plugin DLL in newer MuJoCo wheels.
+mujoco==3.8.0
+cadquery-ocp==7.9.3.1.1
+trimesh
+coacd
+numpy
+glfw
+pillow
