@@ -61,7 +61,7 @@ The parts are split into two sets so two people can model them at the same time.
 
 | Set | File | Parts | Steps |
 | --- | --- | --- | --- |
-| A | [`TAL-SET-A_base-to-upper-arm_rev-A.pdf`](drawings/work-sets/TAL-SET-A_base-to-upper-arm_rev-A.pdf) | TAL-101 base, TAL-102 shoulder, TAL-103 upper arm, TAL-108 hub cap, TAL-111 fit gauge, TAL-112 pocket test coupon | 48 |
+| A | [`TAL-SET-A_base-to-upper-arm_rev-A.pdf`](drawings/work-sets/TAL-SET-A_base-to-upper-arm_rev-A.pdf) | TAL-101 base, TAL-102 shoulder, TAL-103 upper arm, TAL-108 hub cap, TAL-111 fit gauge, TAL-112 pocket test coupon | 49 |
 | B | [`TAL-SET-B_forearm-to-gripper_rev-A.pdf`](drawings/work-sets/TAL-SET-B_forearm-to-gripper_rev-A.pdf) | TAL-104 forearm, TAL-105 wrist, TAL-106 gripper body, TAL-107 moving jaw, TAL-110 idler plate, TAL-113 clevis test coupon | 54 |
 
 - **Shared sheets:** both sets start with TAL-000, TAL-001 and TAL-002. Each person models servo pocket P and the common features from those, so both sides of every joint use the same geometry.
@@ -148,7 +148,7 @@ The sizes now come from Feetech's own CAD of the servo, the model inside SO-101'
 
 Each case also has a second pair of holes in its bottom face beside the shaft, at (−8.3, ±10.25). The base and the wrist use it, so the pan and wrist roll servos are held at both ends (see [Screws](#screws)). Check that your servos have these holes before printing those two parts.
 
-**Printing tolerance.** FDM prints come out slightly small on the inside, so every pocket is the servo plus 0.3 mm all round (`FIT_C`). The rib, bump, spline and idler boss channels are 0.4 mm off them (`PASS_C`). Both were set from the TAL-111 fit gauge printed on the Ender 3 V3 KE: the bare servo slid through the 0.3 window with light friction and was snug in the 0.2 one. 0.2 was not used: a pocket is four times deeper than the gauge, the arm parts are bigger, and the servo has to come out again. The horn openings are R10.8, which leaves 1.2 mm round the Ø19.2 horns. M3 clearance holes are Ø3.4. The TAL-110 idler plate's pocket is 0.3 mm bigger all round than the plate, because both parts are printed.
+**Printing tolerance.** FDM prints come out slightly small on the inside, so every pocket is the servo plus 0.3 mm all round (`FIT_C`). The rib, bump, spline and idler boss channels are 0.4 mm off them (`PASS_C`). Both were set from the TAL-111 fit gauge, printed on a Creality Ender 3 V3 KE (0.4 mm nozzle) in Creality PLA, sliced in Creality Print with the settings under [Printing](#printing): the bare servo slid through the 0.3 window with light friction and was snug in the 0.2 one. The clearance belongs to that printer, filament and profile. On another one, print TAL-111 first and set `FIT_C` to the tightest window that slides, with `PASS_C` 0.1 above it. 0.2 was not used: a pocket is four times deeper than the gauge, the arm parts are bigger, and the servo has to come out again. The horn openings are R10.8, which leaves 1.2 mm round the Ø19.2 horns. M3 clearance holes are Ø3.4. The TAL-110 idler plate's pocket is 0.3 mm bigger all round than the plate, because both parts are printed.
 
 **What the clearance costs.** With 0.3 mm of room, nothing but the case screws holds a servo still. The two faces the screws pull on are also 0.3 mm off their walls, so the screws close that gap by bending the wall, or bridge it. Tighten the top-face screws (output side) first, then the bottom-face ones, and check them again after the first hour of running. The first pockets had 0.4; the gauge showed this printer holds size well enough for 0.3.
 
@@ -159,13 +159,15 @@ The six servos are daisy-chained on one bus from the board in the base. Each STS
 | Hop | Cable | Route |
 | --- | --- | --- |
 | Board → pan servo | 21 cm | The board sits on a deck behind the column, on four standoffs for M2.5 screws (37 × 28 mm pattern, same Waveshare bus servo adapter as SO-101). A 12 × 9.7 mm tunnel runs from the deck into the pan servo's plug bay under the servo. |
-| Pan → shoulder | **35 cm** | Back out through the same tunnel, then a service loop up the back of the column to a clip on the shoulder cradle's back face, and on to the shoulder servo's plugs on the cradle's −Y side. The loop sets the pan range: keep it to about ±110° in software, like SO-101. |
+| Pan → shoulder | **35 cm** | Back out through the same tunnel, up the back of the column through the clip there, then a service loop to a clip on the shoulder cradle's back face, and on to the shoulder servo's plugs on the cradle's −Y side. The loop sets the pan range: keep it to about ±110° in software, like SO-101. |
 | Shoulder → elbow | 21 cm | Across the shoulder joint on the −Y side, outside the slim idler plate, through the clip on the upper arm's waist, and into the plug window in the elbow shell. |
 | Elbow → wrist flex | 21 cm | Same pattern along the forearm. |
 | Wrist flex → wrist roll | 21 cm | Across the wrist joint on the −Y side, into the roll servo's plug bay behind the servo. It opens under the −Y lug so the cable can enter from the side. |
 | Wrist roll → jaw | **30 cm** | Through the clip under the wrist cradle's side window, then a loop around the roll axis to the plug window in the gripper housing's −Y side. Keep roll to about ±150° in software. |
 
 **Cable lengths.** The servos come with 21 cm cables, and four runs fit them with 3 to 12 cm to spare. The two runs that wind round a turning axis don't: as the arm pans, the pan → shoulder cable wraps part way round the column, and the roll → jaw cable winds round the roll axis. Over ±110° of pan the first needs up to 29 cm, and over ±150° of roll the second up to 21 cm between the plugs, so use a 35 cm and a 30 cm cable there (any 3-pin bus servo cable with the same plugs). `cable_check.py` measures every run through its joint's travel, with 15 % added for bends and sag.
+
+**The slack.** Each of those two runs changes length by about 10 cm across its joint's travel, so whatever cable is long enough at one end has that much loose at the other: about 14 cm on the pan run (at about −30° of pan) and 15 cm on the roll run. Let it hang as a loose loop between the two clips, behind the arm, and don't tie it down: the loop is what lets the joint turn. The column clip holds the pan cable against the column below the turntable's edge, so the loop can't drop into the gap between the column top and the turntable. Pan the arm through its full ±110° by hand before powering it, and watch that the loop doesn't catch.
 
 **Why the idler plates are slim:** the plugs sit only 11 mm from each pitch joint's axis, on the passive-horn side. So the −Y plate of each clevis is an R10.5 hub (just over the Ø19.2 passive horn) with a neck pinched to 17 mm, which keeps it clear of the plugs through the whole joint range. The +Y plate on the output horn keeps the full R16 hub. On the upper arm and forearm the idler plate is a separate part, TAL-110, screwed into a pocket in the beam, so the links print without support (see [Printing](#printing)). The wrist roll servo also sits 3 mm further forward than in the first version, so its plugs clear the end of the forearm shell.
 
@@ -260,7 +262,7 @@ Until the case screws are in, nothing stops the servo sliding back out of its op
 
 ## Screws
 
-All holes and counterbores are in the parts, and the screws are modelled in the assembly. Horn and passive-horn screws are M3 into the horns' tapped holes. Servo case screws are M2 self-tapping into the case's 1.6 mm holes. Every case screw seat takes either an M2 × 5 or an M2 × 6, so use whichever came with your servos: there is 2.4 mm of print under each head (2.5 on the arm links' and gripper's top faces), so an M2 × 5 goes 2.6 mm into the case and an M2 × 6 3.6 mm. SO-101 drives its M2 × 6 3.8 mm in, so the holes take either. Counts are for one arm:
+All holes and counterbores are in the parts, and the screws are modelled in the assembly. Horn and passive-horn screws are M3 into the horns' tapped holes. Servo case screws are M2 self-tapping into the case's 1.6 mm holes. Every case screw seat takes either an M2 × 5 or an M2 × 6, so use M2 × 6 where you have them (3.6 mm into the case, close to SO-101's 3.8) and M2 × 5 otherwise (2.6 mm): there is 2.4 mm of print under each head (2.5 on the arm links' and gripper's top faces), so an M2 × 5 goes 2.6 mm into the case and an M2 × 6 3.6 mm. SO-101 drives its M2 × 6 3.8 mm in, so the holes take either. Counts are for one arm:
 
 | Where | Screw | Qty | Notes |
 | --- | --- | --- | --- |

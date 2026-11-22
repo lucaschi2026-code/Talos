@@ -25,6 +25,7 @@ Four scripts check the arm:
 | Shoulder cradle | The shoulder servo's reaction torque goes into the cradle's two long walls (the posts beside the shaft stand off the case): 1.7 MPa unloaded (SF 5.8), 3.2 MPa with 200 g straight out (SF 3.2), 5.4 MPa at stall (SF 1.9) | ✅ |
 | Tip sag from link bending | 2.3 mm | ✅ |
 | Horn screw bearing | M3: 4.9 MPa holding, 8.3 MPa at stall (SF 2.4) | ✅ |
+| Output clevis plates | In-plane bending at the root, holding with 200 g: 3.3 MPa (SF 3.0) and lower. At servo stall: 5.6 MPa on the arm links (SF 1.8), 8.8 MPa on the wrist (SF 1.1, the lowest on the arm, checked against the creep limit) | ✅ |
 | Idler plate screws (TAL-110) | 2 × M3 per plate: 0.5 MPa with the whole joint reaction doubled (SF 39) | ✅ |
 | Grip force | 23 N continuous at mid-jaw, so 200 g needs only 3.3 N | ✅ |
 | Fixed finger root (20 mm wide) | 1.8 MPa continuous, 5.5 MPa at jaw stall (SF 1.8) | ✅ |
@@ -73,6 +74,8 @@ The fit-gauge revision set the printing clearance from a printed TAL-111 gauge: 
 The printed elbow test pieces then showed the clevis plates rubbing on the shell they straddle: the plates were only 0.5 mm off the shell walls. Every clevis plate's inner face moved out to 1.0 mm off the shell, and its pad on the horn grew by the same 0.5 mm, so the horn screws are unchanged. The plates are 3.5 mm thick instead of 4, which brings the moving mass back to 522 g. The horn screw bearing check now counts the pad round each screw as well as the plate: 8.3 MPa at stall (SF 2.4).
 
 The servo mount revision acted on the last two points from the review. The shoulder cradle's posts used to stand 0.5 mm off the case, close enough that the servo's reaction torque bent one of them across its layer lines (13.9 MPa at stall, over the 10 MPa sustained limit). They now stand 0.9 mm off, so the case bears on the top of the cradle's side walls first and the two long walls carry the torque in their own plane: 5.4 MPa at stall (SF 1.9). The wrist roll servo, held by two case screws at its far end only, now has the pair beside the shaft as well, like the pan servo. Every case screw seat takes an M2 × 5 or an M2 × 6. Moving mass stays 522 g.
+
+Ryan's review of that revision added a check the calcs didn't have: the output clevis plates, now 3.5 mm thick, bend in their own plane as they carry the horn's torque (section 7). Holding, every plate has a safety factor of 3 or more. At servo stall the lowest safety factors on the arm are the wrist's clevis plate (1.1), the link clevis plates (1.8) and the shoulder cradle (1.9). Stall is checked against the 10 MPa sustained (creep) limit, and a stall is short, so these leave PLA's short-term strength, several times higher, in hand. If the wrist ever needs more, its plate can grow taller at the root; the flat-top extension already makes it taller than the 24 mm counted here.
 
 The gains are modest because 69 % of the moving mass is servos (6 × 61 g). The printed parts are already mostly 20 % infill, so their weight is in the outer skin. Cutting more plastic would cost stiffness for little torque.
 

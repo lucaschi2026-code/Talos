@@ -120,7 +120,7 @@ CHAIN = (0, (6, 1.5, 1, 1.5))               # centre / cutting-plane line patter
 
 # The parts are split into two work sets so two people can model them in parallel.
 # The reference sheets (TAL-0xx) go in both. The split is balanced on modelling steps
-# (A 48, B 54). The sets only meet at the elbow (upper arm shell -> forearm clevis), and
+# (A 49, B 54). The sets only meet at the elbow (upper arm shell -> forearm clevis), and
 # both sides of it are defined on the shared sheets (servo pocket P, clevis).
 WORK_SETS = {
     "A": ("base-to-upper-arm", "base, shoulder, upper arm, hub caps, fit gauge, pocket test coupon",
@@ -1348,13 +1348,18 @@ def sheet_base():
         pocket_note((0, 0, ta.H_PAN - 18.7), "+Z", "+X", "+Y"),
         f"Top opening: cut box x -36 to 11, y ±{fmt(HW_C)}, from z {fmt(top - 1)} up (the way in: the servo drops "
         "in from the top, connector end first).",
+        f"Cable clip (TAL-002) on the column's back face: at ({fmt(ta.COLUMN_CLIP[0])}, {fmt(ta.COLUMN_CLIP[1])}, "
+        f"{fmt(ta.COLUMN_CLIP[2])}), cable along Z (the pan to shoulder cable, below the turntable's edge).",
         "Cable tunnel (plug bay to board deck): cut box x -60 to -13, y ±6, z 14.8 to 24.5. Pocket P's bump "
         "channel (z down to 24.3) opens into its roof.",
         f"Case screw holes from below (TAL-002, seat {fmt(ta.BASE_SEAT)}): 4X at x {fmt(HXB)} and x {fmt(HXS)}, "
         f"y ±{fmt(HY)}: {DIA}2.4 from z {fmt(seat_z)} up to the pocket floor (z "
         f"{fmt(ta.H_PAN - ta.HORN_FACE - ta.BOTTOM_FACE - ta.FIT_C)}), {DIA}4.2 counterbore from the bottom to z "
         f"{fmt(seat_z)}. The pair at x {fmt(HXS)} runs 0.2 from the plug bay: cut the wall between them away "
-        f"(box x -10.6 to {fmt(HXS)}, |y| {fmt(HY - 2.1)} to 10.6, z 14.8 to {fmt(seat_z)}).",
+        f"(box x -10.6 to {fmt(HXS)}, |y| {fmt(HY - 2.1)} to 10.6, z 14.8 to {fmt(seat_z)}). Their counterbores "
+        f"also run 0.3 from the passive horn opening just below the seat: join them to it (box x {fmt(HXS - 2.1)} "
+        f"to {fmt(HXS + 2.1)}, |y| {fmt(HY - 4.1)} to {fmt(HY)}, z {fmt(ta.H_PAN - ta.HORN_FACE - ta.BOSS[1] - ta.PASS_C - 0.1)} "
+        f"to {fmt(seat_z)}).",
     ])
     s1.notes(GENERAL + ["The pan servo drops in from the top (its horns may stay on); its plugs hang into the "
                         "bay under it. 4X M2 × 6 (or × 5) case screws from below, two at each end of the servo, so the "

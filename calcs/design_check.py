@@ -575,6 +575,29 @@ def main():
         sb = F / n_tab / (HORN_SCREW_D * t_plate)
         w(f"| {link} ({joint}) | {F:.1f} | {F/n_tab:.1f} | {sb:.2f} | {BEARING_ALLOW/sb:.0f} |")
     w("")
+    # output clevis plates: the horn's torque goes through the plate into the link, bending it in its
+    # own plane (about the joint axis) at its root, where it joins the link
+    t_clv = ta.CLV_OUT - ta.CLV_IN
+    w("### Output clevis plates\n")
+    w("The output horn's torque reaches the link through the output clevis plate, bending it in its own "
+      f"plane about the joint axis. At the plate's root, where it joins the link, it is a {t_clv:.1f} mm by "
+      "h rectangle: stress 6 T / (t h²). The plates stand vertical in every print, so that stress runs "
+      "along the layers.\n")
+    w("| Joint (plate) | Root height h (mm) | Holding, 200 g (N*m) | Stress (MPa) | SF | Stall (N*m) | Stress (MPa) | SF |")
+    w("| --- | --- | --- | --- | --- | --- | --- | --- |")
+    clv_worst = None
+    for joint, plate, h in (("shoulder", "upper arm", 30.0), ("elbow", "forearm", 30.0),
+                            ("wrist_flex", "wrist", 24.0)):
+        hold = static[joint][1]
+        s_hold, s_stall = 6 * hold * 1000 / (t_clv * h * h), 6 * TAU_STALL * 1000 / (t_clv * h * h)
+        clv_worst = min(clv_worst or (99, ""), (SIGMA_ALLOW / s_stall, plate))
+        w(f"| {joint} ({plate}) | {h:.0f} | {hold:.2f} | {s_hold:.1f} | {SIGMA_ALLOW/s_hold:.1f} | "
+          f"{TAU_STALL:.2f} | {s_stall:.1f} | {SIGMA_ALLOW/s_stall:.1f} |")
+    w(f"\nThe wrist's root height is its clevis, 2 × 12, without the flat-top extension that makes it taller "
+      f"(so it errs safe). The plates are {t_clv:.1f} mm thick since they moved out to {ta.CLV_IN:g} mm, 1 mm clear "
+      f"of the shell. In-plane bending scales with the thickness, not its square, so the 4.0 mm plates had "
+      f"{t_clv / 4.0:.3f} of these stresses. Stall is checked against the sustained (creep) limit too, so an SF a "
+      "little over 1 there still leaves the short-term strength of PLA, several times higher, in hand.\n")
 
     # --- gripper
     w("## 8. Gripper\n")
