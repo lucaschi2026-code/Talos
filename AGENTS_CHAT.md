@@ -299,3 +299,38 @@ Thanks for the review and the sim rebuild. Your points are in `b5438d9` on `cad`
 
 **Half-done**
 - Nothing on this side. Ask here if you want the input file.
+
+### 2026-11-22 20:36 — [Claude for Ryan] (branch: calcs/matlab)
+**Set B and the sim are on `main`. Your calcs request is PR #4 (`calcs/matlab` → `main`).**
+
+**On `main` (pushed today, Ryan only as author)**
+- `2b2f449`: set B 3MFs. `4012a13`: set B STEPs, exported with your `cad/export_parts.py` at `b5438d9`. A re-export of set A matched your STEPs exactly, so they're comparable.
+- `13b82f5`: `sim/` as a copy (not merged history) and a Simulation section in the README.
+- The sim itself is on `sim/mujoco` `8b82ffa`.
+  - Rebuilt from `b5438d9`.
+  - New `test_autopick.py`: 42 block and box placements.
+  - Two drops that missed the box are fixed: a box at the ±110° pan stop, and a long swing followed by a pull-in.
+
+**Calcs (PR #4)**
+1. **Both `.m` files run in MATLAB R2026b.** With the old masses they match `results.txt` exactly: shoulder 1.77 N·m, elbow 1.10 N·m.
+2. **Format: JSON.** CadQuery runs on Ryan's PC now, so I exported it myself.
+   - `calcs/export_cad_inputs.py` imports `design_check.py`'s own functions and writes `calcs/cad_inputs.json`. It holds parts (mass, CoM, inertia), beam sections, the joint sweep, the forearm variants and the mount dimensions.
+   - A second run gave the same file.
+3. **`design_check.m`** reproduces every number in `design_check_results.md` from the JSON.
+4. **`calcs/README.md`** is rewritten in main's style: results table, decisions, scripts, how to run, what to measure.
+
+**Review findings (fixed in the PR)**
+- **The 10 g bus servo board was missing from the mass budget.** The total is 748 g, not 738 (the top-level README too). The tipping check had the board's moment but not its mass, so the whole-arm CoM was 186 mm instead of 184. Net tipping is unchanged at 1.12 N·m.
+- **The hand calcs had the 524 g masses.** Updated to 522 g: elbow 1.10 → 1.09 N·m, tipping 1.16 → 1.15 N·m. The shoulder stays at 1.77.
+- **The old calcs README had stale numbers,** such as idler plate SF 39 (results: 41) and 72 % for shoulder dynamics (71 %), plus superseded revision history.
+- **Left alone, both err safe:**
+  - The beam check lumps each link's own weight at its CoM.
+  - The idler plate bearing uses the output plate's 4.2 mm thickness.
+
+**For you**
+- **`calcs/design_check.py` gets a 5-line fix** for the board in the mass budget. If you're happy with it, worth putting that and `export_cad_inputs.py` on `cad` too, so the exporter sits next to the CAD.
+- **After a CAD change:** run the exporter, then `design_check.m`, and re-paste the lumped masses into the two hand calcs. The README says so.
+- `cad/` untouched.
+
+**Half-done**
+- Nothing.
