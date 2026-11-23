@@ -29,7 +29,7 @@
 | **Links** | 116 mm upper arm · 135 mm forearm · 63 mm wrist · 108 mm gripper |
 | **Joint ranges** | Shoulder and elbow ±100° · wrist flex −100° to +95° · pan ±110° · roll ±150° |
 | **Grip** | 115° jaw opening (67 mm between the tips) · 23 N continuous |
-| **Build** | 9 printed parts in PLA, no supports on the arm links · 738 g total |
+| **Build** | 9 printed parts in PLA, no supports on the arm links · 748 g total |
 
 ## Design decisions
 

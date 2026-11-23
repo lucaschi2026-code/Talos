@@ -1,13 +1,46 @@
-(Computed with a line-for-line Python port of torque_check.m; MATLAB was not available. Re-run in MATLAB to refresh.)
+Output of torque_check.m, then pan_base_check.m (MATLAB R2026b, CAD at cad b5438d9).
+
 Reach (shoulder to tip): 420 mm
 Shoulder: 1.77 N*m = 60% of stall
-Elbow:    1.10 N*m = 37% of stall
+Elbow:    1.09 N*m = 37% of stall
 Limit:    0.98 N*m (33% of stall)
                 Mass                 kg      Shoulder_Nm
     ____________________________    _____    ___________
 
-    "upper arm + elbow servo"       0.114      0.09059  
-    "forearm + wrist-flex servo"    0.119      0.24504  
-    "wrist + wrist-roll servo"      0.092      0.26092  
-    "gripper + jaw servo"           0.101      0.34946  
-    "payload"                       0.200      0.82404  
+    "upper arm + elbow servo"       0.113     0.089791
+    "forearm + wrist-flex servo"    0.119      0.24504
+    "wrist + wrist-roll servo"      0.092       0.2611
+    "gripper + jaw servo"             0.1       0.3457
+    "payload"                         0.2      0.82404
+
+
+Pan shaft overturning moment, arm straight out
+  Talos:  0.94 N*m no payload, 1.77 N*m with 200 g at the tip
+  SO-101: 1.01 N*m no payload, 1.87 N*m with 200 g at the tip
+  Talos / SO-101: 0.94x loaded, 0.93x unloaded
+  Axial load on the pan servo: 7.1 N
+
+Base tipping about the front edge (64 mm out)
+  Whole-arm CoM: 188 mm from the base axis
+  TIPS: net overturning 1.15 N*m, needs 5.7 N per rear M4 bolt
+
+Turntable rim lift -> tip error (x11.4)
+    Rim_lift_mm    Tip_error_mm
+    ___________    ____________
+
+       0.05          0.56757
+        0.1           1.1351
+        0.2           2.2703
+        0.3           3.4054
+
+                Mass                  kg      Pan_moment_Nm
+    ____________________________    ______    _____________
+
+    "base (fixed)"                  0.2258      -0.020379
+    "shoulder link"                 0.0978              0
+    "upper arm + elbow servo"       0.1131        0.08987
+    "forearm + wrist-flex servo"    0.1188        0.24462
+    "wrist + wrist-roll servo"      0.0919        0.26082
+    "gripper + jaw servo"           0.1004        0.34709
+    "payload"                          0.2        0.82404
+
