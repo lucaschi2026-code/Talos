@@ -37,7 +37,7 @@
 | --- | --- |
 | **116 / 135 mm links** | Proven proportions for this servo (SO-101's). They give 402 mm of reach against a 350 mm target. A shorter forearm saves only 9 % of elbow torque for 20 mm less reach |
 | **Shoulder on the pan axis** | Same reach in every direction, and 6 % less load on the pan servo than an offset shoulder |
-| **Waisted octagonal links with windows** | The shoulder servo is the torque limit, so mass comes out of mid-span. 70 % of the moving mass is servos |
+| **Waisted octagonal links with windows** | The shoulder servo is the torque limit, so mass comes out of mid-span. 58 % of the moving mass is servos |
 | **Flat-bottomed links, separate idler plates** | Every link prints flat with no supports, on one solid first layer |
 | **Pockets 0.3 mm over the servo** | Set from a printed clearance gauge, not guessed. Pockets are built from the manufacturer's servo CAD |
 | **Clevis joints on both horns** | Each joint is supported on both sides of the servo, not hung off one shaft |

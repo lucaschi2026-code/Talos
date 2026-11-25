@@ -33,7 +33,7 @@ Full numbers, methods and plots: [`design_check_results.md`](design_check_result
 ## What they decided
 
 1. **200 g with the elbow bent.** Top-down picks within 195 mm of the base axis. Light objects only at full reach.
-2. **Clamp the base.** With the arm straight out, its centre of mass is 184 mm from the base axis (188 mm with the payload at the tip), and the base edge is 64 mm out. The two rear M4s need about 6 N each.
+2. **Clamp the base.** With the arm straight out, its centre of mass is 184 mm from the base axis with 200 g at mid-jaw (188 mm with it at the tip), and the base edge is 64 mm out. The two rear M4s need about 6 N each.
 3. **No pan bearing for v1.** SO-101 runs the same servo with a higher shaft load. After assembly, load the arm straight out and measure the turntable rim: rim lift shows up 11.4× larger at the tip, so up to 0.1 mm is fine. Above that, fit a slide ring in the 2.8 mm gap under the turntable.
 4. **Shoulder counterbalance for v2.** About 0.75 N·m of help at horizontal brings a straight-arm 200 g hold under the limit.
 
