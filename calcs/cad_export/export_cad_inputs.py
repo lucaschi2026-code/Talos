@@ -5,7 +5,7 @@ mass, centre of mass and inertia, the beam cross-sections, the joint-range colli
 dimensions the screw and mount checks use. Run it on the cad branch after any change to
 cad/talos_arm.py, then run design_check.m.
 
-    python export_cad_inputs.py    # writes cad_inputs.json; 5-15 minutes, mostly the collision sweep
+    python calcs/cad_export/export_cad_inputs.py    # writes cad_inputs.json; 5-15 minutes, mostly the collision sweep
 """
 
 import json
@@ -13,10 +13,13 @@ import re
 import subprocess
 from pathlib import Path
 
+import sys
+
 import numpy as np
 
-import design_check as dc
-from design_check import ta
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "python"))
+import design_check as dc  # noqa: E402
+from design_check import ta  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 L2_VARIANTS = (115.0, 120.0, 125.0)   # forearm lengths for the sensitivity check (design L2 is added)
@@ -55,7 +58,7 @@ def main():
                             cwd=HERE).stdout.strip()
 
     data = dict(
-        source=dict(script="calcs/export_cad_inputs.py", cad="cad/talos_arm.py", commit=commit),
+        source=dict(script="calcs/cad_export/export_cad_inputs.py", cad="cad/talos_arm.py", commit=commit),
         units="lengths mm, masses kg, inertias kg*mm^2 about each part's centre of mass, in its link frame",
         links=list(ta.LINKS),
         mass_model=dict(RHO_PLA=dc.RHO_PLA, T_SHELL=dc.T_SHELL, INFILL=dc.INFILL, M_SERVO=dc.M_SERVO,

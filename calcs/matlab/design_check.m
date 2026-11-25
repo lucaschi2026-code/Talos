@@ -7,7 +7,7 @@
 clear; clc;
 here = fileparts(mfilename('fullpath'));
 if isempty(here), here = pwd; end
-in = jsondecode(fileread(fullfile(here, 'cad_inputs.json')));
+in = jsondecode(fileread(fullfile(here, '..', 'cad_export', 'cad_inputs.json')));
 g = in.geometry;
 
 %% Inputs (the same as design_check.py)
@@ -129,8 +129,8 @@ xregion(-90, 90 - R.shoulder(2), 'FaceColor', [0.85 0.85 0.85], 'DisplayName', '
 xlim([-90 90]); grid on; legend('FontSize', 8, 'Location', 'best');
 xlabel('Upper-arm elevation from horizontal (deg)'); ylabel('Shoulder torque (N*m)');
 title(sprintf('Shoulder torque with %.0f g payload (CAD masses)', PAYLOAD*1000));
-save_plot(fig, fullfile(here, 'shoulder_torque_cad.png'));
-out(end+1) = sprintf('![Shoulder torque vs elevation](shoulder_torque_cad.png)\n');
+save_plot(fig, fullfile(here, '..', 'graphs', 'shoulder_torque_cad.png'));
+out(end+1) = sprintf('![Shoulder torque vs elevation](../graphs/shoulder_torque_cad.png)\n');
 
 %% 2. Joint ranges
 out(end+1) = sprintf('## 2. Joint ranges from CAD collision sweep\n');
@@ -177,14 +177,14 @@ yline(PAYLOAD*1000, '--', 'Color', [0.84 0.15 0.16], 'DisplayName', sprintf('%.0
 xlabel('Payload radius from base axis (mm)'); ylabel('Max continuous payload (g)');
 ylim([0 1500]); grid on; legend('FontSize', 8, 'Location', 'best');
 title('Payload envelope (1/3-stall limit on every pitch joint)');
-save_plot(fig, fullfile(here, 'payload_envelope.png'));
+save_plot(fig, fullfile(here, '..', 'graphs', 'payload_envelope.png'));
 out(end+1) = '| Task | Reachable radius (mm) | 200 g OK out to (mm) |';
 out(end+1) = '| --- | --- | --- |';
 for k = 1:size(env, 1)
     r200 = 'never'; if ~isempty(env{k, 4}), r200 = sprintf('%d', env{k, 4}); end
     out(end+1) = sprintf('| %s | %.0f - %.0f | %s |', env{k, 1}, env{k, 2}, env{k, 3}, r200);
 end
-out(end+1) = sprintf('\n![Payload envelope](payload_envelope.png)\n');
+out(end+1) = sprintf('\n![Payload envelope](../graphs/payload_envelope.png)\n');
 
 %% 4. Dynamic torque
 out(end+1) = sprintf('## 4. Dynamic torque\n');

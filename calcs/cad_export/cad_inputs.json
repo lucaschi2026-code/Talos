@@ -1,6 +1,6 @@
 {
  "source": {
-  "script": "calcs/export_cad_inputs.py",
+  "script": "calcs/cad_export/export_cad_inputs.py",
   "cad": "cad/talos_arm.py",
   "commit": "b5438d9"
  },

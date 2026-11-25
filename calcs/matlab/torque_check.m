@@ -53,4 +53,4 @@ yline(tau_stall, '-k', 'stall');
 xlabel('Shoulder angle from horizontal (deg)'); ylabel('Shoulder torque (N*m)');
 title('Talos shoulder torque, arm straight'); legend('load', 'Location', 'south'); grid on
 xlim([-90 90]); ylim([0 1.1*tau_stall]); theme(gcf, 'light');
-exportgraphics(gcf, 'shoulder_torque.png', 'Resolution', 150);
+exportgraphics(gcf, fullfile(fileparts(mfilename('fullpath')), '..', 'graphs', 'shoulder_torque.png'), 'Resolution', 150);

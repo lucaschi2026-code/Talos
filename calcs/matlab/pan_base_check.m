@@ -77,4 +77,4 @@ xlabel('Payload at the tip (g)'); ylabel('Pan shaft overturning moment (N*m)');
 title('Pan servo shaft moment, arm straight out');
 legend('Talos (CAD)', 'SO-101', 'Location', 'northwest'); grid on
 theme(gcf, 'light');
-exportgraphics(gcf, 'pan_moment.png', 'Resolution', 150);
+exportgraphics(gcf, fullfile(fileparts(mfilename('fullpath')), '..', 'graphs', 'pan_moment.png'), 'Resolution', 150);

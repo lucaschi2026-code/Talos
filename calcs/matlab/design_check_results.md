@@ -53,7 +53,7 @@ wrist + wrist-roll servo     m = 0.092 kg, CoM   38.3 mm from wrist_flex axis
 gripper + jaw servo          m = 0.100 kg, CoM  101.4 mm from wrist_flex axis
 ```
 
-![Shoulder torque vs elevation](shoulder_torque_cad.png)
+![Shoulder torque vs elevation](../graphs/shoulder_torque_cad.png)
 
 ## 2. Joint ranges from CAD collision sweep
 
@@ -86,7 +86,7 @@ Largest payload that keeps shoulder, elbow and wrist under the continuous limit,
 | side grasp, object centre 45 mm above table | 305 - 390 | never |
 | horizontal reach at shoulder height | 315 - 400 | never |
 
-![Payload envelope](payload_envelope.png)
+![Payload envelope](../graphs/payload_envelope.png)
 
 ## 4. Dynamic torque
 

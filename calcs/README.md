@@ -26,9 +26,9 @@ Arm held straight out (the worst case) with 200 g at mid-jaw, unless noted. The 
 | Fixed finger root | SF 1.8 at jaw stall | ✅ |
 | Joint ranges (CAD collision sweep) | Shoulder and elbow ±100°, wrist flex −100° to +95°, jaw 0–115° | ✅ |
 
-Full numbers, methods and plots: [`design_check_results.md`](design_check_results.md).
+Full numbers, methods and plots: [`design_check_results.md`](matlab/design_check_results.md).
 
-![Payload envelope](payload_envelope.png)
+![Payload envelope](graphs/payload_envelope.png)
 
 ## What we decided
 
@@ -37,32 +37,35 @@ Full numbers, methods and plots: [`design_check_results.md`](design_check_result
 3. **No pan bearing for v1.** SO-101 runs the same servo with a higher shaft load. After assembly, load the arm straight out and measure the turntable rim: rim lift shows up 11.4× larger at the tip, so up to 0.1 mm is fine. Above that, fit a slide ring in the 2.8 mm gap under the turntable.
 4. **Shoulder counterbalance for v2.** About 0.75 N·m of help at horizontal brings a straight-arm 200 g hold under the limit.
 
-## Scripts
+## Files
 
-| File | What it does |
-| --- | --- |
-| [`design_check.m`](design_check.m) | The full check, eleven sections. Writes `design_check_results.md`, `shoulder_torque_cad.png` and `payload_envelope.png` |
-| [`torque_check.m`](torque_check.m) | Hand calc for the shoulder and elbow, 200 g at the jaw tip: 1.77 and 1.09 N·m. Saves `shoulder_torque.png` |
-| [`pan_base_check.m`](pan_base_check.m) | Hand calc for the pan shaft, base tipping and turntable play, against SO-101. Saves `pan_moment.png` |
-| [`results.txt`](results.txt) | MATLAB output of the two hand calcs |
-| [`cad_inputs.json`](cad_inputs.json) | What `design_check.m` reads from the CAD: each part's mass, centre of mass and inertia, the beam sections every 2 mm, the joint ranges, and the screw and mount dimensions |
-| [`export_cad_inputs.py`](export_cad_inputs.py) | Writes `cad_inputs.json` from the CAD. Runs on the `cad` branch |
-| [`design_check.py`](design_check.py) | The Python original of `design_check.m`, with the same results. It builds the CAD, so it only runs on the `cad` branch |
-| [`so101_compare.py`](so101_compare.py) | The same statics on SO-101's URDF, for the comparison numbers |
+| Folder | File | What it does |
+| --- | --- | --- |
+| [`matlab/`](matlab) | [`design_check.m`](matlab/design_check.m) | The full check, eleven sections. Writes `design_check_results.md` and two graphs |
+| | [`design_check_results.md`](matlab/design_check_results.md) | Every number, method and pass/fail from the full check |
+| | [`torque_check.m`](matlab/torque_check.m) | Hand calc for the shoulder and elbow, 200 g at the jaw tip: 1.77 and 1.09 N·m |
+| | [`pan_base_check.m`](matlab/pan_base_check.m) | Hand calc for the pan shaft, base tipping and turntable play, against SO-101 |
+| | [`results.txt`](matlab/results.txt) | MATLAB output of the two hand calcs |
+| [`python/`](python) | [`design_check.py`](python/design_check.py) | The Python original of `design_check.m`, with the same results. It builds the CAD, so it only runs on the `cad` branch |
+| | [`so101_compare.py`](python/so101_compare.py) | The same statics on SO-101's URDF, for the comparison numbers |
+| [`cad_export/`](cad_export) | [`export_cad_inputs.py`](cad_export/export_cad_inputs.py) | Measures the CAD and writes `cad_inputs.json`. Runs on the `cad` branch |
+| | [`cad_inputs.json`](cad_export/cad_inputs.json) | What `design_check.m` reads from the CAD: each part's mass, centre of mass and inertia, the beam sections every 2 mm, the joint ranges, and the screw and mount dimensions |
+| [`graphs/`](graphs) | `shoulder_torque_cad.png`, `payload_envelope.png` | From `design_check.m` |
+| | `shoulder_torque.png`, `pan_moment.png` | From `torque_check.m` and `pan_base_check.m` |
 
 The hand calcs put the payload at the jaw tip, 18 mm further out than mid-jaw, so they come out about 2 % higher than `design_check.m`.
 
 ## Run it
 
-Open a script in MATLAB and press F5. Each one takes a few seconds.
+Open a script in `matlab/` and press F5. Each one takes a few seconds. Graphs go to `graphs/`.
 
 After a CAD change, on the `cad` branch:
 
-1. Run `python calcs/export_cad_inputs.py` with the CAD's Python environment. It takes 5 to 15 minutes, mostly the collision sweep.
-2. Run `design_check.m`.
+1. Run `python calcs/cad_export/export_cad_inputs.py` with the CAD's Python environment. It takes 5 to 15 minutes, mostly the collision sweep.
+2. Run `matlab/design_check.m`.
 3. Copy the new lumped masses from `design_check_results.md` (section 1) into `torque_check.m` and `pan_base_check.m`.
 
-To try other print settings, change `M_SERVO`, `T_SHELL` or `INFILL` in `design_check.py`, which `export_cad_inputs.py` uses, and export again. 15 % infill with 2 perimeters cuts the printed moving mass by about a quarter.
+To try other print settings, change `M_SERVO`, `T_SHELL` or `INFILL` in `python/design_check.py`, which the exporter uses, and export again. 15 % infill with 2 perimeters cuts the printed moving mass by about a quarter.
 
 ## Assumptions to measure
 
