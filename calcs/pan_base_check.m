@@ -2,7 +2,7 @@
 % The pan servo is the only joint whose output shaft carries the arm's full
 % bending moment from one side (each pitch joint has an idler on the far side).
 % Statics with the arm held straight out (the worst case). Talos masses and
-% centres of mass are the CAD values printed by design_check.py; SO-101 values
+% centres of mass are the CAD values from design_check.m (cad b5438d9); SO-101 values
 % come from its URDF via so101_compare.py.
 
 clear; clc;
@@ -14,8 +14,8 @@ g = 9.81;  % gravity, m/s^2
 names  = ["base (fixed)", "shoulder link", "upper arm + elbow servo", ...
           "forearm + wrist-flex servo", "wrist + wrist-roll servo", ...
           "gripper + jaw servo", "payload"];
-m      = [0.2255, 0.0979, 0.1138, 0.1194, 0.0921, 0.1006, 0.200];
-x      = [-0.0090, 0.0000, 0.0810, 0.2099, 0.2891, 0.3526, 0.420];  % payload at the tip
+m      = [0.2258, 0.0978, 0.1131, 0.1188, 0.0919, 0.1004, 0.200];
+x      = [-0.0092, 0.0000, 0.0810, 0.2099, 0.2893, 0.3524, 0.420];  % payload at the tip
 moving = 2:7;  % everything the pan servo carries
 arm    = 2:6;  % same, without the payload
 
@@ -26,8 +26,8 @@ arm    = 2:6;  % same, without the payload
 so_m = [0.100, 0.103, 0.104, 0.079, 0.087, 0.012, 0.200];
 so_x = [0.0308, 0.1194, 0.2445, 0.3200, 0.3676, 0.3953, 0.4408];
 
-%% Check: the CAD moving mass should match design_check.py (524 g)
-assert(abs(sum(m(arm)) - 0.524) < 0.002, 'Moving mass does not match the CAD')
+%% Check: the CAD moving mass should match design_check.m (522 g)
+assert(abs(sum(m(arm)) - 0.522) < 0.002, 'Moving mass does not match the CAD')
 
 %% 1. Overturning moment on the pan servo's output shaft
 M_pan   = g * sum(m(moving) .* x(moving));
