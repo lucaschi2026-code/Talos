@@ -44,8 +44,6 @@
 | **1.0 mm clevis gap** | The first 0.5 mm gap rubbed on a test print |
 | **Slim idler plates** | The servo's cable plugs sit 11 mm from the joint axis; the plates clear them through the full range |
 | **Four screws on the pan and roll servos** | Stops the servo rocking under the arm's overturning load |
-| **Cables cross on the joint axes** | Bending a joint barely changes the cable's length, so the stock 21 cm cables reach |
-| **Clamped base (4 × M4)** | At full reach the arm's centre of mass is 188 mm out, but the base edge is only 64 mm out |
 
 ## Five problems We solved
 
