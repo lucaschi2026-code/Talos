@@ -12,7 +12,7 @@ Four scripts check the arm:
 
 | Check | Result | Status |
 | --- | --- | --- |
-| Moving mass | 522 g above the base, 738 g total | |
+| Moving mass | 522 g above the base, 748 g total with the bus servo board | |
 | Shoulder holding, arm straight, 200 g | 1.73 N·m = 59 % of stall, 1.8× the 1/3 limit | ❌ over (first calc: 1.62) |
 | Elbow holding, arm straight, 200 g | 1.06 N·m, 1.08× the limit | ⚠️ just over (first calc: 0.96) |
 | Wrist flex / roll | 0.43 / 0.004 N·m | ✅ |

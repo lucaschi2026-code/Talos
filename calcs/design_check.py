@@ -334,19 +334,20 @@ def main():
     # --- masses
     w("## Mass budget\n")
     w(f"Printed parts: PLA {RHO_PLA*1e3:.2f} g/cm3, {T_SHELL} mm perimeters/skins, "
-      f"{INFILL:.0%} infill. Servos: {M_SERVO:.0f} g + {M_HARDWARE:.0f} g screws and cable.\n")
-    w("| Link | Printed (g) | Servo (g) | Total (g) |")
-    w("| --- | --- | --- | --- |")
-    total = 0
+      f"{INFILL:.0%} infill. Servos: {M_SERVO:.0f} g + {M_HARDWARE:.0f} g screws and cable. "
+      f"The bus servo board is {M_BOARD:.0f} g, in the base.\n")
+    w("| Link | Printed (g) | Servo (g) | Board (g) | Total (g) |")
+    w("| --- | --- | --- | --- | --- |")
+    total = sum(p["m"] for p in parts)   # the board too: it's in the tipping check's moment sum
     for link in ta.LINKS:
         pr = sum(p["m"] for p in parts if p["link"] == link and not p["name"].startswith("servo")
                  and p["name"] != "bus_servo_board")
         sv = sum(p["m"] for p in parts if p["link"] == link and p["name"].startswith("servo"))
-        total += pr + sv
+        bd = sum(p["m"] for p in parts if p["link"] == link and p["name"] == "bus_servo_board")
         label = "base (fixed)" if link == ta.LINKS[0] else link
-        w(f"| {label} | {pr*1000:.0f} | {sv*1000:.0f} | {(pr+sv)*1000:.0f} |")
+        w(f"| {label} | {pr*1000:.0f} | {sv*1000:.0f} | {f'{bd*1000:.0f}' if bd else ''} | {(pr+sv+bd)*1000:.0f} |")
     moving = sum(link_mass(parts, l) for l in ta.LINKS[1:])
-    w(f"| **total** | | | **{total*1000:.0f}** |\n")
+    w(f"| **total** | | | | **{total*1000:.0f}** |\n")
     w(f"Moving mass above the base: {moving*1000:.0f} g.\n")
 
     ranges = {} if args.fast else joint_ranges(parts)
