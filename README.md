@@ -51,11 +51,9 @@
 
 | Problem | Fix |
 | --- | --- |
-| 🔩 **The first prints didn't fit the servos** | Rebuilt every pocket from the manufacturer's CAD. A script now checks the real servo in every part |
-| 🚪 **Servos had no way into their parts** | Added a slide-in path with channels for everything sticking out. Four servos go in with their horns off |
-| 📏 **Unknown printer clearance** | Printed a six-window gauge and two test pieces before the arm. Settled on 0.3 mm, plus lead-ins and room for sagging bridges |
-| ⚙️ **Test joint rubbed when turning** | Doubled the clevis gap to 1.0 mm without changing the screws |
-| 🔌 **Two cable runs too short** | Measured every run through its joint's travel. Specified 35 cm and 30 cm cables and a clip for the slack |
+| **The first prints didn't fit the servos** | Rebuilt every pocket from the manufacturer's CAD. A script now checks the real servo in every part |
+| **Servos had no way into their parts** | Added a slide-in path with channels for everything sticking out. Four servos go in with their horns off |
+| **Unknown printer clearance** | Printed a six-window gauge and two test pieces before the arm. Settled on 0.3 mm, plus lead-ins and room for sagging bridges |
 
 ## Printing
 
