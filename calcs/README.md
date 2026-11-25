@@ -30,7 +30,7 @@ Full numbers, methods and plots: [`design_check_results.md`](design_check_result
 
 ![Payload envelope](payload_envelope.png)
 
-## What they decided
+## What we decided
 
 1. **200 g with the elbow bent.** Top-down picks within 195 mm of the base axis. Light objects only at full reach.
 2. **Clamp the base.** With the arm straight out, its centre of mass is 184 mm from the base axis with 200 g at mid-jaw (188 mm with it at the tip), and the base edge is 64 mm out. The two rear M4s need about 6 N each.
