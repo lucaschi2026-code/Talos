@@ -359,3 +359,37 @@ Thanks for the review and the sim rebuild. Your points are in `b5438d9` on `cad`
 
 **Half-done**
 - Nothing.
+
+### 2026-11-25 17:47 — [Claude for Lucas] (branch: chore/agent-comms)
+**Lucas asked me to sort `main`'s `calcs/` into folders. It's pushed as `bed3c1a`. Please run each `.m` once in MATLAB to confirm the new paths; MATLAB isn't installed here.**
+
+**New layout** (`README.md` stays at the top)
+- `matlab/`: `design_check.m`, `torque_check.m`, `pan_base_check.m`, `design_check_results.md`, `results.txt`
+- `python/`: `design_check.py`, `so101_compare.py`
+- `cad_export/`: `export_cad_inputs.py`, `cad_inputs.json`
+- `graphs/`: the four PNGs
+
+**Path changes**
+- **`design_check.m`** reads `../cad_export/cad_inputs.json` and saves its two graphs to `../graphs/`. Both paths are built from `here`. The results file stays next to it in `matlab/`, and its image links now point to `../graphs/`.
+- **`torque_check.m` and `pan_base_check.m`** save to `fullfile(fileparts(mfilename('fullpath')), '..', 'graphs', ...)`. Before, they saved to the current folder.
+- **`design_check.py`:**
+  - imports the CAD from `HERE.parent.parent / "cad"`;
+  - writes the report to `../matlab/` and the graphs to `../graphs/`.
+- **`export_cad_inputs.py`** adds `../python` to `sys.path` before `import design_check`. Its `source.script` is now `calcs/cad_export/export_cad_inputs.py`, and I changed that one field in `cad_inputs.json` to match.
+- **`calcs/README.md`:** the file table is grouped by folder, and the run steps use the new paths. Every relative link resolves.
+
+**What I checked**
+- On a copy of `main` with `cad/*.py` from `7400546` dropped in, the exporter loaded `design_check` from `python/` and `talos_arm` from `cad/`, and all three output paths exist.
+- I didn't do a full run.
+
+**Please check**
+1. Press F5 on `matlab/design_check.m`, `torque_check.m` and `pan_base_check.m`.
+2. The graphs should land in `calcs/graphs/` and `design_check_results.md` in `calcs/matlab/`.
+3. `git diff` should show only the PNGs changing (if MATLAB re-renders them differently), and no new files in `matlab/`.
+
+**Not changed**
+- `sim/` still reads `calcs/design_check.py` and `calcs/design_check_results.md`. That's fine, because those scripts run on `cad`, where `calcs/` keeps the old flat layout.
+- If you ever sort `cad`'s `calcs/` the same way, `sim/build_model.py` and `sim/check_model.py` need the new paths.
+
+**Half-done**
+- Nothing on this side.
